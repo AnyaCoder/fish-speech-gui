@@ -1,0 +1,95 @@
+name: "中文 (简体)"
+title: "Fish-Speech (FishAudio) (版本: {version})"
+
+theme:
+  name: "主题"
+  auto: "系统"
+  light: "亮色"
+  dark: "暗色"
+
+i18n:
+  language: "语言"
+  restart_msg: "配置已更改，是否要重新启动应用程序以使其生效?"
+
+backend:
+  title: "后端设置"
+  protocol_label: "协议"
+  name: "后端"
+  test: "测试"
+  test_succeed: "成功连接到后端。"
+  test_failed: "5 秒内无法连接到后端。"
+
+audio_device:
+  name: "音频设备（请对输入和输出使用同类设备）"
+  input: "输入（录音）"
+  output: "输出（播放）"
+
+audio:
+  name: "音频设置"
+  chunk_length: "切分长度"
+  max_new_tokens: "一次最大生成tokens数"
+  top_p: "样本截断概率(top_p)"
+  repetition_penalty: "重复惩罚系数"
+  temperature: "温度系数"
+  mp3_bitrate: "MP3 比特率"
+
+reference:
+  name: "参考语音和文本"
+  id: "参考模型的ID"
+  upload_info: "手动上传参考文件"
+  upload: "上传"
+  remove: "移除"
+  stmt: "优先级: 参考模型的ID > 手动上传的参考文件"
+
+tts_input:
+  name: "输入待合成文本"
+
+tts_output:
+  name: "生成的语音"
+
+action:
+  start: "开始语音合成"
+  stop: "停止语音合成"
+  latency: "延迟: {latency:.2f} ms"
+  error: "发生错误, 请重新启动合成"
+
+config:
+  save: "保存配置"
+  load: "加载配置"
+  save_msg: "配置已保存, 你想导出到文件吗?"
+  save_title: "导出配置到 YAML 文件"
+  load_msg: "导入完成, 程序将重启以使其生效."
+  load_title: "从 YAML 文件导入配置"
+  error: "无法解析配置文件, 已重置"
+
+plugins:
+  name: "插件"
+  none:
+    name: "无"
+  diffusion:
+    name: "扩散模型"
+    speaker:
+      label: "说话人"
+      tooltip: "说话人 ID, 如 0, 1, 2"
+    sample_method:
+      label: "采样算法"
+      tooltip: "none 为不采样, PLMS 为快速采样"
+    sample_interval:
+      label: "采样间隔"
+      tooltip: "每隔多少步进行采样, 数字越大速度越快, 但是质量越低"
+    skip_steps:
+      label: "跳过步骤"
+      tooltip: "浅扩散相关配置, 跳过如 970 步来实现只消除电音, 不影响效果"
+  hifisinger:
+    name: "HiFiSinger"
+    speaker:
+      label: "说话人"
+      tooltip: "说话人 ID, 如 0, 1, 2"
+  rvc:
+    name: "RVC"
+    speaker:
+      label: "说话人"
+      tooltip: "说话人 ID, 如 0, 1, 2"
+    index_ratio:
+      label: "索引比例"
+      tooltip: "TODO: 补充信息"

@@ -1,0 +1,95 @@
+name: "English (US)"
+title: "Fish-Speech (FishAudio) (Version: {version})"
+
+theme:
+  name: "Theme"
+  auto: "System"
+  light: "Light"
+  dark: "Dark"
+
+i18n:
+  language: "Language"
+  restart_msg: "Configuration changed, do you want to restart the app to take effect?"
+
+backend:
+  title: "Backend Settings"
+  protocol_label: "Protocol"
+  name: "Backend"
+  test: "Test"
+  test_succeed: "Successfully connected to backend."
+  test_failed: "Failed to connect to backend in 5s."
+
+audio_device:
+  name: "Audio Device (Please use same kind of device for input and output)"
+  input: "Input (Recording)"
+  output: "Output (Playback)"
+
+audio:
+  name: "Audio Settings"
+  chunk_length: "Chunk Length"
+  max_new_tokens: "Max New Tokens"
+  top_p: "Top P"
+  repetition_penalty: "Repetition Penalty"
+  temperature: "Temperature"
+  mp3_bitrate: "MP3 Bitrate"
+
+reference:
+  name: "Ref Audio And Text"
+  id: "Reference ID"
+  upload_info: "Manual Upload\n Ref Files"
+  upload: "Upload"
+  remove: "Remove"
+  stmt: "Priority: Reference ID > Manual Upload Files"
+
+tts_input:
+  name: "Input text to be synthesized"
+
+tts_output:
+  name: "Synthesized Audio"
+
+action:
+  start: "Start Text To Speech"
+  stop: "Stop Text To Speech"
+  latency: "Latency: {latency:.2f} ms"
+  error: "An error occurred, please restart the conversion"
+
+config:
+  save: "Save Config"
+  load: "Load Config"
+  save_msg: "Configuration saved, do you want to export to a file?"
+  save_title: "Export Configuration to YAML File"
+  load_msg: "Import completed, the program will restart to take effect."
+  load_title: "Import Configuration from YAML File"
+  error: "Unable to parse configuration file, reset"
+
+plugins:
+  name: "Plugin"
+  none:
+    name: "None"
+  diffusion:
+    name: "Diffusion Model"
+    speaker:
+      label: "Speaker"
+      tooltip: "Speaker ID, e.g., 0, 1, 2"
+    sample_method:
+      label: "Sampling Algorithm"
+      tooltip: "none for no sampling, PLMS for fast sampling"
+    sample_interval:
+      label: "Sampling Interval"
+      tooltip: "How many steps to take a sample, the larger the number, the faster the speed, but the lower the quality"
+    skip_steps:
+      label: "Skip Steps"
+      tooltip: "Shallow diffusion related configuration, skip steps like 970 to eliminate electronic sound only, without affecting the effect"
+  hifisinger:
+    name: "HiFiSinger"
+    speaker:
+      label: "Speaker"
+      tooltip: "Speaker ID, e.g., 0, 1, 2"
+  rvc:
+    name: "RVC"
+    speaker:
+      label: "Speaker"
+      tooltip: "Speaker ID, e.g., 0, 1, 2"
+    index_ratio:
+      label: "Index Ratio"
+      tooltip: "TODO: Supplement Information"
