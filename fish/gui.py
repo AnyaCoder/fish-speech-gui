@@ -1,22 +1,19 @@
 import os
 
 os.environ["no_proxy"] = "localhost, 127.0.0.1, 0.0.0.0"
+import datetime
 import sys
 
 import httpx
 import ormsgpack
-import datetime
-
-from fish.audio import ServeReferenceAudio, ServeTTSRequest, get_devices
-
 import pkg_resources
 import qdarktheme
 import requests
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QMutex, QWaitCondition, QUrl
+from PyQt6.QtCore import QMutex, Qt, QThread, QUrl, QWaitCondition, pyqtSignal
 from PyQt6.QtGui import QIcon
-from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
-    QListWidget,
+    QApplication,
     QComboBox,
     QFileDialog,
     QGridLayout,
@@ -24,18 +21,19 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QTextEdit,
+    QListWidget,
     QMessageBox,
     QPushButton,
     QSlider,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
-    QApplication,
 )
 
+from fish.audio import ServeReferenceAudio, ServeTTSRequest, get_devices
 from fish.config import application_path, config, load_config, save_config
-from fish.i18n import _t, language_map
 from fish.file import *
+from fish.i18n import _t, language_map
 
 
 class MainWindow(QWidget):

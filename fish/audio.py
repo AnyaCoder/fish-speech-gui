@@ -29,6 +29,7 @@ def get_devices(update: bool = True):
 
 
 from typing import Literal, Optional
+
 from pydantic import BaseModel
 
 
