@@ -21,7 +21,7 @@ class Config:
     locale: str = locale.getdefaultlocale()[0]
     backend: str = "http://localhost:8080/v1/tts"
     ref_id: str = ""
-    
+
     input_device: str | None = None
     output_device: str | None = None
 
@@ -41,7 +41,6 @@ class Config:
     # Plugins
     current_plugin: str | None = None
     plugins: dict[str, dict] = field(default_factory=dict)
-
 
 
 default_config_path = str((Path.home() / ".fish" / "config.yaml").absolute())

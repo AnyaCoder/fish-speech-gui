@@ -27,8 +27,10 @@ def get_devices(update: bool = True):
 
     return input_devices, output_devices
 
+
 from typing import Literal, Optional
 from pydantic import BaseModel
+
 
 class ServeReferenceAudio(BaseModel):
     audio: bytes

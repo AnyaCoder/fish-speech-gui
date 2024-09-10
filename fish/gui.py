@@ -1,5 +1,6 @@
 import os
-os.environ["no_proxy"]="localhost, 127.0.0.1, 0.0.0.0"
+
+os.environ["no_proxy"] = "localhost, 127.0.0.1, 0.0.0.0"
 import sys
 
 import httpx
@@ -29,12 +30,13 @@ from PyQt6.QtWidgets import (
     QSlider,
     QVBoxLayout,
     QWidget,
-    QApplication
+    QApplication,
 )
 
 from fish.config import application_path, config, load_config, save_config
 from fish.i18n import _t, language_map
 from fish.file import *
+
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -76,7 +78,6 @@ class MainWindow(QWidget):
         y = (screen_geometry.height() - window_geometry.height()) // 4
         self.move(x, y)
 
-       
     def setup_ui_settings(self):
         # we have language and backend settings in the first row
         row = QHBoxLayout()
@@ -100,7 +101,7 @@ class MainWindow(QWidget):
         for k, v in language_map.items():
             self.language_combo.addItem(v, k)
 
-        self.language_combo.setCurrentText(language_map.get(config.locale, 'en_US'))
+        self.language_combo.setCurrentText(language_map.get(config.locale, "en_US"))
         self.language_combo.currentIndexChanged.connect(self.change_language)
         self.language_combo.setMinimumWidth(150)
         row.addWidget(self.language_combo)
@@ -174,7 +175,7 @@ class MainWindow(QWidget):
         # third row: a group box for audio settings
         row = QGroupBox(_t("audio.name"))
         row_layout = QGridLayout()
-        
+
         # db_threshold, pitch_shift
         row_layout.addWidget(QLabel(_t("audio.chunk_length")), 0, 0)
         self.chunk_length_slider = QSlider(Qt.Orientation.Horizontal)
@@ -231,7 +232,9 @@ class MainWindow(QWidget):
         self.repetition_penalty_slider.setTickInterval(10)
         self.repetition_penalty_slider.setValue(config.repetition_penalty)
         row_layout.addWidget(self.repetition_penalty_slider, 1, 4)
-        self.repetition_penalty_label = QLabel(f"{config.repetition_penalty / 1000:.2f}")
+        self.repetition_penalty_label = QLabel(
+            f"{config.repetition_penalty / 1000:.2f}"
+        )
         self.repetition_penalty_label.setFixedWidth(50)
         row_layout.addWidget(self.repetition_penalty_label, 1, 5)
         self.repetition_penalty_slider.valueChanged.connect(
@@ -266,10 +269,10 @@ class MainWindow(QWidget):
             config.mp3_bitrate = int(self.mp3_bitrate_combo.currentText())
 
         row_layout.addWidget(self.mp3_bitrate_combo, 2, 4)
-    
+
         row.setLayout(row_layout)
         self.main_layout.addWidget(row)
-    
+
     def setup_reference_settings(self):
         row = QGroupBox()
         row.setTitle(_t("reference.name"))
@@ -288,9 +291,11 @@ class MainWindow(QWidget):
         # self.file_list_widget.setFixedWidth(300)
         self.file_list_widget.setMinimumHeight(50)
         self.file_list_widget.setMaximumHeight(100)
-        self.file_list_widget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded) 
+        self.file_list_widget.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         row_layout.addWidget(self.file_list_widget, 1, 0, 3, 2)
-        
+
         row_layout.addWidget(QLabel(_t("reference.upload_info")), 1, 2, 1, 1)
 
         self.upload_button = QPushButton(_t("reference.upload"))
@@ -313,16 +318,17 @@ class MainWindow(QWidget):
         row_layout = QGridLayout()
         self.text_edit = QTextEdit()
 
-        self.text_edit.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)  
-        self.text_edit.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded) 
+        self.text_edit.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        self.text_edit.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         row_layout.addWidget(self.text_edit, 0, 0)
 
         row.setLayout(row_layout)
         self.main_layout.addWidget(row)
 
     def setup_audioplayer_settings(self):
-
         row = QGroupBox()
         row.setTitle(_t("tts_output.name"))
         row_layout = QGridLayout()
@@ -343,23 +349,38 @@ class MainWindow(QWidget):
         self.volume_slider.setRange(0, 100)
         self.volume_slider.setValue(config.volume)
         self.volume_slider.sliderMoved.connect(self.set_volume)
-        row_layout.addWidget(QLabel(_t("tts_output.volume") + " ↕"), 1, 0, 1, 1, Qt.AlignmentFlag.AlignCenter)
+        row_layout.addWidget(
+            QLabel(_t("tts_output.volume") + " ↕"),
+            1,
+            0,
+            1,
+            1,
+            Qt.AlignmentFlag.AlignCenter,
+        )
         row_layout.addWidget(self.volume_slider, 1, 1, 1, 4)
         self.volume_label = QLabel(f"{config.volume}")
         self.volume_slider.valueChanged.connect(
             lambda v: self.volume_label.setText(f"{v}")
         )
-        row_layout.addWidget(self.volume_label, 1, 5, 1, 1, Qt.AlignmentFlag.AlignCenter)
+        row_layout.addWidget(
+            self.volume_label, 1, 5, 1, 1, Qt.AlignmentFlag.AlignCenter
+        )
         self.play_button = QPushButton(_t("tts_output.play"))
         self.play_button.clicked.connect(self.toggle_play)
         row_layout.addWidget(self.play_button, 1, 6, 1, 2)
-
 
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
         self.speed_slider.setRange(50, 200)  # 50% 到 200% 的播放速率
         self.speed_slider.setValue(100)  # 初始速率为 100%
         self.speed_slider.sliderMoved.connect(self.set_speed)
-        row_layout.addWidget(QLabel(_t("tts_output.speed") + " >>"), 2, 0, 1, 1, Qt.AlignmentFlag.AlignCenter)
+        row_layout.addWidget(
+            QLabel(_t("tts_output.speed") + " >>"),
+            2,
+            0,
+            1,
+            1,
+            Qt.AlignmentFlag.AlignCenter,
+        )
         row_layout.addWidget(self.speed_slider, 2, 1, 1, 4)
         self.speed_label = QLabel(f"{config.speed / 100:.2f} x")
         self.speed_slider.valueChanged.connect(
@@ -401,7 +422,6 @@ class MainWindow(QWidget):
 
         widget.setLayout(row)
         self.main_layout.addWidget(widget)
-
 
     def setup_action_buttons(self):
         row = QWidget()
@@ -452,21 +472,26 @@ class MainWindow(QWidget):
             os.execv(sys.argv[0], sys.argv)
 
     def upload_files(self):
-        files, _ = QFileDialog.getOpenFileNames(self, "Select Files", "", "Audio / Text (*.wav *.lab *.flac *.mp3)")
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "Select Files", "", "Audio / Text (*.wav *.lab *.flac *.mp3)"
+        )
         if files:
             self.files = files
             self.file_list_widget.clear()
             for file in files:
                 self.file_list_widget.addItem(file)
-            QMessageBox.information(self, "Upload Complete", f"Uploaded {len(files)} files.")
+            QMessageBox.information(
+                self, "Upload Complete", f"Uploaded {len(files)} files."
+            )
         else:
-            QMessageBox.warning(self, "No Files Selected", "Please select at least one file.")
+            QMessageBox.warning(
+                self, "No Files Selected", "Please select at least one file."
+            )
 
     def remove_files(self):
         self.files = []
         self.file_list_widget.clear()
         QMessageBox.warning(self, "Caution", "Successfully Removed References.")
-
 
     def test_backend(self):
         backend = self.backend_input.text()
@@ -478,7 +503,9 @@ class MainWindow(QWidget):
 
         message_box = QMessageBox()
 
-        if response is not None and (response.status_code == 200 or response.status_code == 204):
+        if response is not None and (
+            response.status_code == 200 or response.status_code == 204
+        ):
             message_box.setIcon(QMessageBox.Icon.Information)
             message_box.setText(_t("backend.test_succeed") + f"{response}")
             config.backend = backend
@@ -550,28 +577,30 @@ class MainWindow(QWidget):
         os.execv(sys.argv[0], sys.argv)
 
     def open_file(self):
-        file_name, _ = QFileDialog.getOpenFileName(self, _t("tts_output.open") , "", "Audio Files (*.mp3 *.wav *.flac)")
+        file_name, _ = QFileDialog.getOpenFileName(
+            self, _t("tts_output.open"), "", "Audio Files (*.mp3 *.wav *.flac)"
+        )
         self.set_audio(file_name)
-            
+
     def set_audio(self, audio_file):
         if Path(audio_file).exists():
             self.player.setSource(QUrl.fromLocalFile(audio_file))
-            self.play_button.setText(_t("tts_output.play") )
+            self.play_button.setText(_t("tts_output.play"))
             self.now_audio.setText(_t("action.audio").format(audio_name=audio_file))
 
     def toggle_play(self):
         if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
             self.player.pause()
-            self.play_button.setText(_t("tts_output.play") )
+            self.play_button.setText(_t("tts_output.play"))
         else:
             self.player.play()
-            self.play_button.setText(_t("tts_output.pause") )
+            self.play_button.setText(_t("tts_output.pause"))
 
     def set_position(self, position):
         self.player.setPosition(position)
 
     def set_speed(self, speed):
-        playback_rate = speed / 100.0 
+        playback_rate = speed / 100.0
         self.player.setPlaybackRate(playback_rate)
 
     def set_volume(self, volume):
@@ -603,13 +632,13 @@ class MainWindow(QWidget):
 
         now = datetime.datetime.now()
         text = self.text_edit.toPlainText()
-        
+
         audio_name = now.strftime("%Y%m%d_%H%M%S") + "_" + text[:5]
 
         self.tts_worker = TTSWorker(
             ref_files=self.files,
             ref_id=self.ref_id_input.text(),
-            backend=self.backend_input.text(), 
+            backend=self.backend_input.text(),
             text=text,
             api_key=self.api_key.text(),
             audio_name=audio_name,
@@ -618,11 +647,10 @@ class MainWindow(QWidget):
         self.tts_worker.start()
         self.audio_name = str(Path(f"{audio_name}.mp3").resolve()).replace("\\", "/")
         self.now_audio.setText(_t("action.audio").format(audio_name=self.audio_name))
-        
 
     def stop_conversion(self):
-        self.tts_worker.stop()  
-        self.tts_worker.wait()  
+        self.tts_worker.stop()
+        self.tts_worker.wait()
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
 
@@ -635,17 +663,17 @@ class TTSWorker(QThread):
     finished = pyqtSignal()
 
     def __init__(
-        self, 
+        self,
         ref_files: list[str],
         ref_id: str,
-        backend: str, 
+        backend: str,
         text: str,
         api_key: str,
         audio_name: str,
     ):
         super().__init__()
         self.mutex = QMutex()
-        self.wait_condition = QWaitCondition() 
+        self.wait_condition = QWaitCondition()
         self._stop_requested = False
         self.ref_files = ref_files
         self.ref_id = ref_id if len(ref_id) > 0 else None
@@ -655,9 +683,12 @@ class TTSWorker(QThread):
         self.audio_name = audio_name
 
     def run(self):
-
         pre_files = [f for f in self.ref_files if not f.endswith(".lab")]
-        audio_files = [f for f in pre_files if Path(f).exists() and Path(f).with_suffix(".lab").exists()]
+        audio_files = [
+            f
+            for f in pre_files
+            if Path(f).exists() and Path(f).with_suffix(".lab").exists()
+        ]
 
         request = ServeTTSRequest(
             text=self.text,
@@ -665,7 +696,8 @@ class TTSWorker(QThread):
                 ServeReferenceAudio(
                     audio=Path(f).read_bytes(),
                     text=Path(f).with_suffix(".lab").read_text(encoding="utf-8"),
-                ) for f in audio_files
+                )
+                for f in audio_files
             ],
             reference_id=self.ref_id,
             streaming=False,
@@ -678,7 +710,9 @@ class TTSWorker(QThread):
             with client.stream(
                 "POST",
                 self.backend,
-                content=ormsgpack.packb(request, option=ormsgpack.OPT_SERIALIZE_PYDANTIC),
+                content=ormsgpack.packb(
+                    request, option=ormsgpack.OPT_SERIALIZE_PYDANTIC
+                ),
                 headers={
                     "authorization": f"Bearer {self.api_key}",
                     "content-type": "application/msgpack",
@@ -686,7 +720,6 @@ class TTSWorker(QThread):
                 timeout=None,
             ) as response:
                 for chunk in response.iter_bytes():
-
                     self.mutex.lock()
                     if self._stop_requested:
                         print("TTS is interrupted!")
@@ -695,7 +728,7 @@ class TTSWorker(QThread):
                     self.mutex.unlock()
                     f.write(chunk)
 
-        self.finished.emit() 
+        self.finished.emit()
 
     def stop(self):
         self.mutex.lock()
