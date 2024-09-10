@@ -52,6 +52,9 @@ tts_output:
   play: "播放"
   pause: "暂停"
   open: "打开音频文件"
+  save_audio_label: "保存路径"
+  save_audio_input: "必须是一个合法的绝对/相对文件夹路径"
+  save: "保存"
 
 action:
   audio: "现在播放: {audio_name}"

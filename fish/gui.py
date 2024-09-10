@@ -1,3 +1,4 @@
+import io
 import os
 
 os.environ["no_proxy"] = "localhost, 127.0.0.1, 0.0.0.0"
@@ -385,9 +386,20 @@ class MainWindow(QWidget):
             lambda v: self.speed_label.setText(f"{v / 100:.2f} x")
         )
         row_layout.addWidget(self.speed_label, 2, 5, 1, 1, Qt.AlignmentFlag.AlignCenter)
+
         self.open_button = QPushButton(_t("tts_output.open"))
         self.open_button.clicked.connect(self.open_file)
         row_layout.addWidget(self.open_button, 2, 6, 1, 2)
+
+        self.save_audio_label = QLabel(_t("tts_output.save_audio_label"))
+        row_layout.addWidget(
+            self.save_audio_label, 3, 0, 1, 1, Qt.AlignmentFlag.AlignCenter
+        )
+
+        self.save_audio_path = QLineEdit()
+        self.save_audio_path.setPlaceholderText(_t("tts_output.save_audio_input"))
+        self.save_audio_path.setText(f"{config.save_path}")
+        row_layout.addWidget(self.save_audio_path, 3, 1, 1, 4)
 
         row.setLayout(row_layout)
 
@@ -466,7 +478,6 @@ class MainWindow(QWidget):
         if ret == QMessageBox.StandardButton.Yes:
             if len(sys.argv) == 1:
                 sys.argv.insert(0, sys.executable)
-            print(sys.argv)
             os.execv(sys.argv[0], sys.argv)
 
     def upload_files(self):
@@ -525,6 +536,7 @@ class MainWindow(QWidget):
         config.temperature = self.temperature_slider.value()
         config.mp3_bitrate = int(self.mp3_bitrate_combo.currentText())
         config.ref_id = self.ref_id_input.text()
+        config.save_path = self.save_audio_path.text()
 
         save_config()
 
@@ -571,7 +583,8 @@ class MainWindow(QWidget):
         msg_box.setText(_t("config.load_msg"))
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg_box.exec()
-
+        if len(sys.argv) == 1:
+            sys.argv.insert(0, sys.executable)
         os.execv(sys.argv[0], sys.argv)
 
     def open_file(self):
@@ -616,6 +629,9 @@ class MainWindow(QWidget):
         current_time = self.format_time(self.player.position())
         total_time = self.format_time(self.player.duration())
         self.time_label.setText(f"{current_time} / {total_time}")
+        if self.player.position() == self.player.duration():
+            self.player.pause()
+            self.play_button.setText(_t("tts_output.play"))
 
     @staticmethod
     def format_time(ms):
@@ -632,19 +648,30 @@ class MainWindow(QWidget):
         text = self.text_edit.toPlainText()
 
         audio_name = now.strftime("%Y%m%d_%H%M%S") + "_" + text[:5]
-
+        audio_path = Path(self.save_audio_path.text()) / f"{audio_name}.mp3"
+        audio_path.parent.mkdir(parents=True, exist_ok=True)
+        self.audio_path = str(audio_path)
+        kwargs = dict(
+            chunk_length=self.chunk_length_slider.value(),
+            top_p=self.top_p_slider.value() / 1000.0,
+            repetition_penalty=self.repetition_penalty_slider.value() / 1000.0,
+            max_new_tokens=self.max_new_tokens_slider.value(),
+            temperature=self.temperature_slider.value() / 1000.0,
+            mp3_bitrate=int(self.mp3_bitrate_combo.currentText()),
+        )
         self.tts_worker = TTSWorker(
             ref_files=self.files,
             ref_id=self.ref_id_input.text(),
             backend=self.backend_input.text(),
             text=text,
             api_key=self.api_key.text(),
-            audio_name=audio_name,
+            audio_path=str(audio_path),
+            **kwargs,
         )
         self.tts_worker.finished.connect(self.on_conversion_finished)
         self.tts_worker.start()
-        self.audio_name = str(Path(f"{audio_name}.mp3").resolve()).replace("\\", "/")
-        self.now_audio.setText(_t("action.audio").format(audio_name=self.audio_name))
+
+        self.now_audio.setText(_t("action.audio").format(audio_name=str(audio_path)))
 
     def stop_conversion(self):
         self.tts_worker.stop()
@@ -654,7 +681,7 @@ class MainWindow(QWidget):
 
     def on_conversion_finished(self):
         self.stop_conversion()
-        self.set_audio(self.audio_name)
+        self.set_audio(self.audio_path)
 
 
 class TTSWorker(QThread):
@@ -667,7 +694,8 @@ class TTSWorker(QThread):
         backend: str,
         text: str,
         api_key: str,
-        audio_name: str,
+        audio_path: str,
+        **kwargs,
     ):
         super().__init__()
         self.mutex = QMutex()
@@ -678,7 +706,8 @@ class TTSWorker(QThread):
         self.backend = backend
         self.text = text
         self.api_key = api_key
-        self.audio_name = audio_name
+        self.audio_path = audio_path
+        self.kwargs = kwargs
 
     def run(self):
         pre_files = [f for f in self.ref_files if not f.endswith(".lab")]
@@ -699,12 +728,16 @@ class TTSWorker(QThread):
             ],
             reference_id=self.ref_id,
             streaming=False,
+            format="mp3",
+            chunk_length=self.kwargs["chunk_length"],
+            top_p=self.kwargs["top_p"],
+            repetition_penalty=self.kwargs["repetition_penalty"],
+            max_new_tokens=self.kwargs["max_new_tokens"],
+            temperature=self.kwargs["temperature"],
+            mp3_bitrate=self.kwargs["mp3_bitrate"],
         )
 
-        with (
-            httpx.Client() as client,
-            open(f"{self.audio_name}.mp3", "wb") as f,
-        ):
+        with httpx.Client() as client, open(f"{self.audio_path}", "wb") as f:
             with client.stream(
                 "POST",
                 self.backend,

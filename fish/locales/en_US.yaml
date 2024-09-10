@@ -52,6 +52,9 @@ tts_output:
   play: "Play"
   pause: "Pause"
   open: "Open Audio File"
+  save_audio_label: "Save Path"
+  save_audio_input: "Must a Valid Folder Path"
+  save: "Save"
 
 action:
   audio: "Now playing: {audio_name}"

@@ -2,7 +2,7 @@ import os
 import platform
 import subprocess as sp
 
-package_type = os.environ.get("PACKAGE_TYPE", "onedir")
+package_type = os.environ.get("PACKAGE_TYPE", "onefile")
 assert package_type in ("onedir", "onefile"), "PACKAGE_TYPE must be onedir or onefile"
 
 # upgrade dependencies manually
