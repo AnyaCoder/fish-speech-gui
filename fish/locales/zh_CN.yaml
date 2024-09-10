@@ -46,6 +46,11 @@ tts_input:
 
 tts_output:
   name: "生成的语音"
+  volume: "音量"
+  speed: "倍速"
+  play: "播放"
+  pause: "暂停"
+  open: "打开音频文件"
 
 action:
   start: "开始语音合成"

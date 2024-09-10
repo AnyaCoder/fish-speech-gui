@@ -332,14 +332,14 @@ class MainWindow(QWidget):
         self.volume_slider.setRange(0, 100)
         self.volume_slider.setValue(config.volume)
         self.volume_slider.sliderMoved.connect(self.set_volume)
-        row_layout.addWidget(QLabel("Volume ↕"), 1, 0, 1, 1, Qt.AlignmentFlag.AlignCenter)
+        row_layout.addWidget(QLabel(_t("tts_output.volume") + " ↕"), 1, 0, 1, 1, Qt.AlignmentFlag.AlignCenter)
         row_layout.addWidget(self.volume_slider, 1, 1, 1, 4)
         self.volume_label = QLabel(f"{config.volume}")
         self.volume_slider.valueChanged.connect(
             lambda v: self.volume_label.setText(f"{v}")
         )
         row_layout.addWidget(self.volume_label, 1, 5, 1, 1, Qt.AlignmentFlag.AlignCenter)
-        self.play_button = QPushButton("Play")
+        self.play_button = QPushButton(_t("tts_output.play"))
         self.play_button.clicked.connect(self.toggle_play)
         row_layout.addWidget(self.play_button, 1, 6, 1, 2)
 
@@ -348,14 +348,14 @@ class MainWindow(QWidget):
         self.speed_slider.setRange(50, 200)  # 50% 到 200% 的播放速率
         self.speed_slider.setValue(100)  # 初始速率为 100%
         self.speed_slider.sliderMoved.connect(self.set_speed)
-        row_layout.addWidget(QLabel("Speed >>"), 2, 0, 1, 1, Qt.AlignmentFlag.AlignCenter)
+        row_layout.addWidget(QLabel(_t("tts_output.speed") + " >>"), 2, 0, 1, 1, Qt.AlignmentFlag.AlignCenter)
         row_layout.addWidget(self.speed_slider, 2, 1, 1, 4)
         self.speed_label = QLabel(f"{config.speed / 100:.2f} x")
         self.speed_slider.valueChanged.connect(
             lambda v: self.speed_label.setText(f"{v / 100:.2f} x")
         )
         row_layout.addWidget(self.speed_label, 2, 5, 1, 1, Qt.AlignmentFlag.AlignCenter)
-        self.open_button = QPushButton("Open Audio File")
+        self.open_button = QPushButton(_t("tts_output.open"))
         self.open_button.clicked.connect(self.open_file)
         row_layout.addWidget(self.open_button, 2, 6, 1, 2)
 
@@ -536,18 +536,18 @@ class MainWindow(QWidget):
         os.execv(sys.argv[0], sys.argv)
 
     def open_file(self):
-        file_name, _ = QFileDialog.getOpenFileName(self, "Open Audio File", "", "Audio Files (*.mp3 *.wav *.flac)")
+        file_name, _ = QFileDialog.getOpenFileName(self, _t("tts_output.open") , "", "Audio Files (*.mp3 *.wav *.flac)")
         if file_name:
             self.player.setSource(QUrl.fromLocalFile(file_name))
-            self.play_button.setText("Play")
+            self.play_button.setText(_t("tts_output.play") )
 
     def toggle_play(self):
         if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
             self.player.pause()
-            self.play_button.setText("Play")
+            self.play_button.setText(_t("tts_output.play") )
         else:
             self.player.play()
-            self.play_button.setText("Pause")
+            self.play_button.setText(_t("tts_output.pause") )
 
     def set_position(self, position):
         self.player.setPosition(position)

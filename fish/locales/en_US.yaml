@@ -46,6 +46,11 @@ tts_input:
 
 tts_output:
   name: "Synthesized Audio"
+  volume: "Volume"
+  speed: "Speed"
+  play: "Play"
+  pause: "Pause"
+  open: "Open Audio File"
 
 action:
   start: "Start Text To Speech"

@@ -13,16 +13,16 @@ sep = ";" if platform.system() == "Windows" else ":"
 
 args = [
     "pyinstaller",
-    "rtvc/__main__.py",
+    "fish/__main__.py",
     f"--{package_type}",
     "-n",
-    "rtvc",
+    "fish",
     "--additional-hooks=extra-hooks",
     "--noconfirm",
     "--add-data",
-    f"rtvc/assets{sep}assets",
+    f"fish/assets{sep}assets",
     "--add-data",
-    f"rtvc/locales{sep}locales",
+    f"fish/locales{sep}locales",
 ]
 
 sp.check_call(args)
