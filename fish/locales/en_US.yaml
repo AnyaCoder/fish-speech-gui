@@ -13,7 +13,8 @@ i18n:
 
 backend:
   title: "Backend Settings"
-  protocol_label: "Protocol"
+  api_key: "API KEY"
+  api_info: "Only used in Online API"
   name: "Backend"
   test: "Test"
   test_succeed: "Successfully connected to backend."
@@ -53,6 +54,7 @@ tts_output:
   open: "Open Audio File"
 
 action:
+  audio: "Now playing: {audio_name}"
   start: "Start Text To Speech"
   stop: "Stop Text To Speech"
   latency: "Latency: {latency:.2f} ms"

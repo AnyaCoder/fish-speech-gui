@@ -164,3 +164,7 @@ __main__.build
 *.build
 __main__
 Info.plist
+/*.mp3
+/*.lab
+/*.wav
+/*.flac

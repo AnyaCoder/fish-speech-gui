@@ -13,7 +13,8 @@ i18n:
 
 backend:
   title: "后端设置"
-  protocol_label: "协议"
+  api_key: "API 密钥"
+  api_info: "仅需于在线服务时使用"
   name: "后端"
   test: "测试"
   test_succeed: "成功连接到后端。"
@@ -53,6 +54,7 @@ tts_output:
   open: "打开音频文件"
 
 action:
+  audio: "现在播放: {audio_name}"
   start: "开始语音合成"
   stop: "停止语音合成"
   latency: "延迟: {latency:.2f} ms"

@@ -1,8 +1,10 @@
 import os
+os.environ["no_proxy"]="localhost, 127.0.0.1, 0.0.0.0"
 import sys
 
 import httpx
 import ormsgpack
+import datetime
 
 from fish.audio import ServeReferenceAudio, ServeTTSRequest, get_devices
 
@@ -27,10 +29,12 @@ from PyQt6.QtWidgets import (
     QSlider,
     QVBoxLayout,
     QWidget,
+    QApplication
 )
 
 from fish.config import application_path, config, load_config, save_config
 from fish.i18n import _t, language_map
+from fish.file import *
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -60,9 +64,19 @@ class MainWindow(QWidget):
 
         # Use size hint to set a reasonable size
         self.setMinimumWidth(900)
+        self.center()
 
         self.files = []
 
+    def center(self):
+        screen = QApplication.primaryScreen()
+        screen_geometry = screen.availableGeometry()
+        window_geometry = self.frameGeometry()
+        x = (screen_geometry.width() - window_geometry.width()) // 4
+        y = (screen_geometry.height() - window_geometry.height()) // 4
+        self.move(x, y)
+
+       
     def setup_ui_settings(self):
         # we have language and backend settings in the first row
         row = QHBoxLayout()
@@ -245,14 +259,11 @@ class MainWindow(QWidget):
         self.mp3_bitrate_combo.addItems(["64", "128", "192"])
         self.mp3_bitrate_combo.setFixedWidth(100)
         if config.mp3_bitrate is not None:
-            for i in range(self.mp3_bitrate_combo.count()):
-                if self.mp3_bitrate_combo.itemData(i) == config.mp3_bitrate:
-                    self.mp3_bitrate_combo.setCurrentIndex(i)
-                    break
-            else:
-                # not found, use default
-                self.mp3_bitrate_combo.setCurrentIndex(0)
-                config.mp3_bitrate = self.mp3_bitrate_combo.itemData(0)
+            self.mp3_bitrate_combo.setCurrentText(str(config.mp3_bitrate))
+        else:
+            # not found, use default
+            self.mp3_bitrate_combo.setCurrentIndex(0)
+            config.mp3_bitrate = int(self.mp3_bitrate_combo.currentText())
 
         row_layout.addWidget(self.mp3_bitrate_combo, 2, 4)
     
@@ -370,13 +381,13 @@ class MainWindow(QWidget):
         widget.setTitle(_t("backend.title"))
         row = QHBoxLayout()
 
-        # protocol
-        row.addWidget(QLabel(_t("backend.protocol_label")))
-        self.backend_protocol = QComboBox()
-        self.backend_protocol.setMinimumWidth(75)
-        self.backend_protocol.addItems(["v1"])
-        self.backend_protocol.setCurrentText("v1")
-        row.addWidget(self.backend_protocol)
+        # api
+        row.addWidget(QLabel(_t("backend.api_key")))
+        self.api_key = QLineEdit()
+        self.api_key.setMinimumWidth(75)
+        self.api_key.setPlaceholderText(_t("backend.api_info"))
+        self.api_key.setText("YOUR_API_KEY")
+        row.addWidget(self.api_key)
 
         # set up backend (url) input, and a test button
         row.addWidget(QLabel(_t("backend.name")))
@@ -395,6 +406,8 @@ class MainWindow(QWidget):
     def setup_action_buttons(self):
         row = QWidget()
         row_layout = QHBoxLayout()
+        self.now_audio = QLabel(_t("action.audio").format(audio_name="(null)"))
+        row_layout.addWidget(self.now_audio)
         row_layout.addStretch(1)
 
         self.start_button = QPushButton(_t("action.start"))
@@ -465,14 +478,14 @@ class MainWindow(QWidget):
 
         message_box = QMessageBox()
 
-        if response is not None and response.status_code == 200:
+        if response is not None and (response.status_code == 200 or response.status_code == 204):
             message_box.setIcon(QMessageBox.Icon.Information)
-            message_box.setText(_t("backend.test_succeed"))
+            message_box.setText(_t("backend.test_succeed") + f"{response}")
             config.backend = backend
             save_config()
         else:
             message_box.setIcon(QMessageBox.Icon.Question)
-            message_box.setText(_t("backend.test_failed"))
+            message_box.setText(_t("backend.test_failed") + f"{response}")
 
         message_box.exec()
 
@@ -482,10 +495,11 @@ class MainWindow(QWidget):
         config.output_device = self.output_device_combo.currentData()
         config.chunk_length = self.chunk_length_slider.value()
         config.max_new_tokens = self.max_new_tokens_slider.value()
-        config.repetition_penalty = self.repetition_penalty_slider.value()
+        config.top_p = self.top_p_slider.value()
         config.repetition_penalty = self.repetition_penalty_slider.value()
         config.temperature = self.temperature_slider.value()
-        config.mp3_bitrate = self.mp3_bitrate_combo.currentData()
+        config.mp3_bitrate = int(self.mp3_bitrate_combo.currentText())
+        config.ref_id = self.ref_id_input.text()
 
         save_config()
 
@@ -537,9 +551,13 @@ class MainWindow(QWidget):
 
     def open_file(self):
         file_name, _ = QFileDialog.getOpenFileName(self, _t("tts_output.open") , "", "Audio Files (*.mp3 *.wav *.flac)")
-        if file_name:
-            self.player.setSource(QUrl.fromLocalFile(file_name))
+        self.set_audio(file_name)
+            
+    def set_audio(self, audio_file):
+        if Path(audio_file).exists():
+            self.player.setSource(QUrl.fromLocalFile(audio_file))
             self.play_button.setText(_t("tts_output.play") )
+            self.now_audio.setText(_t("action.audio").format(audio_name=audio_file))
 
     def toggle_play(self):
         if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
@@ -583,9 +601,24 @@ class MainWindow(QWidget):
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
 
-        self.tts_worker = TTSWorker()
+        now = datetime.datetime.now()
+        text = self.text_edit.toPlainText()
+        
+        audio_name = now.strftime("%Y%m%d_%H%M%S") + "_" + text[:5]
+
+        self.tts_worker = TTSWorker(
+            ref_files=self.files,
+            ref_id=self.ref_id_input.text(),
+            backend=self.backend_input.text(), 
+            text=text,
+            api_key=self.api_key.text(),
+            audio_name=audio_name,
+        )
         self.tts_worker.finished.connect(self.on_conversion_finished)
         self.tts_worker.start()
+        self.audio_name = str(Path(f"{audio_name}.mp3").resolve()).replace("\\", "/")
+        self.now_audio.setText(_t("action.audio").format(audio_name=self.audio_name))
+        
 
     def stop_conversion(self):
         self.tts_worker.stop()  
@@ -595,40 +628,59 @@ class MainWindow(QWidget):
 
     def on_conversion_finished(self):
         self.stop_conversion()
+        self.set_audio(self.audio_name)
 
 
 class TTSWorker(QThread):
     finished = pyqtSignal()
 
-    def __init__(self):
+    def __init__(
+        self, 
+        ref_files: list[str],
+        ref_id: str,
+        backend: str, 
+        text: str,
+        api_key: str,
+        audio_name: str,
+    ):
         super().__init__()
         self.mutex = QMutex()
         self.wait_condition = QWaitCondition() 
-        self._stop_requested = False 
+        self._stop_requested = False
+        self.ref_files = ref_files
+        self.ref_id = ref_id if len(ref_id) > 0 else None
+        self.backend = backend
+        self.text = text
+        self.api_key = api_key
+        self.audio_name = audio_name
 
     def run(self):
 
+        pre_files = [f for f in self.ref_files if not f.endswith(".lab")]
+        audio_files = [f for f in pre_files if Path(f).exists() and Path(f).with_suffix(".lab").exists()]
+
         request = ServeTTSRequest(
-            text="你说的对, 但是原神是一款由米哈游自主研发的开放世界手游.",
+            text=self.text,
             references=[
                 ServeReferenceAudio(
-                    audio=open("lengyue.wav", "rb").read(),
-                    text=open("lengyue.lab", "r", encoding="utf-8").read(),
-                )
+                    audio=Path(f).read_bytes(),
+                    text=Path(f).with_suffix(".lab").read_text(encoding="utf-8"),
+                ) for f in audio_files
             ],
-            streaming=True,
+            reference_id=self.ref_id,
+            streaming=False,
         )
 
         with (
             httpx.Client() as client,
-            open("hello.wav", "wb") as f,
+            open(f"{self.audio_name}.mp3", "wb") as f,
         ):
             with client.stream(
                 "POST",
-                "http://127.0.0.1:8080/v1/tts",
+                self.backend,
                 content=ormsgpack.packb(request, option=ormsgpack.OPT_SERIALIZE_PYDANTIC),
                 headers={
-                    "authorization": "Bearer YOUR_API_KEY",
+                    "authorization": f"Bearer {self.api_key}",
                     "content-type": "application/msgpack",
                 },
                 timeout=None,

@@ -21,7 +21,7 @@ class Config:
     locale: str = locale.getdefaultlocale()[0]
     backend: str = "http://localhost:8080/v1/tts"
     ref_id: str = ""
-
+    
     input_device: str | None = None
     output_device: str | None = None
 
@@ -44,7 +44,7 @@ class Config:
 
 
 
-default_config_path = str((Path.home() / ".rtvc" / "config.yaml").absolute())
+default_config_path = str((Path.home() / ".fish" / "config.yaml").absolute())
 config = Config()
 
 
