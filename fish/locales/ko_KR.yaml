@@ -1,0 +1,105 @@
+name: "한국어 (KR)"
+title: "Fish-Speech (FishAudio) (버전: {version})"
+
+theme:
+  name: "테마"
+  auto: "시스템"
+  light: "라이트 모드"
+  dark: "다크 모드"
+
+i18n:
+  language: "언어"
+  restart_msg: "설정이 변경되었습니다. 변경 사항을 적용하려면 애플리케이션을 재시작하시겠습니까?"
+
+backend:
+  title: "백엔드 설정"
+  api_key: "API 키"
+  api_info: "온라인 서비스에서만 사용됩니다"
+  name: "백엔드"
+  test: "테스트"
+  test_succeed: "백엔드에 성공적으로 연결되었습니다."
+  test_failed: "5초 내에 백엔드 연결에 실패했습니다."
+
+audio_device:
+  name: "오디오 장치 (입출력 장치를 동일한 종류로 설정하세요)"
+  input: "입력 (녹음)"
+  output: "출력 (재생)"
+
+audio:
+  name: "오디오 설정"
+  chunk_length: "청크 길이"
+  max_new_tokens: "최대 생성 토큰 수"
+  top_p: "샘플링 자르기 확률 (Top P)"
+  repetition_penalty: "반복 패널티"
+  temperature: "온도 조정"
+  mp3_bitrate: "MP3 비트레이트"
+
+reference:
+  name: "참고 오디오 및 텍스트"
+  id: "참고 모델 ID"
+  upload_info: "참고 파일 수동 업로드"
+  upload: "업로드"
+  remove: "제거"
+  stmt: "우선순위: 참고 모델 ID > 수동 업로드 파일"
+
+tts_input:
+  name: "합성할 텍스트 입력"
+
+tts_output:
+  name: "합성된 오디오"
+  volume: "볼륨"
+  speed: "재생 속도"
+  play: "재생"
+  pause: "일시정지"
+  open: "오디오 파일 열기"
+  save_audio_label: "저장 경로"
+  save_audio_input: "유효한 절대/상대 폴더 경로여야 합니다"
+  save: "저장"
+
+action:
+  audio: "현재 재생 중: {audio_name}"
+  start: "음성 합성 시작"
+  stop: "음성 합성 중지"
+  latency: "지연 시간: {latency:.2f} ms"
+  error: "오류가 발생했습니다. 합성을 다시 시도하세요."
+
+config:
+  save: "설정 저장"
+  load: "설정 불러오기"
+  save_msg: "설정이 저장되었습니다. 파일로 내보내시겠습니까?"
+  save_title: "설정을 YAML 파일로 내보내기"
+  load_msg: "설정을 불러왔습니다. 적용하려면 프로그램이 재시작됩니다."
+  load_title: "YAML 파일에서 설정 가져오기"
+  error: "설정 파일을 해석할 수 없습니다. 기본 설정으로 재설정되었습니다."
+
+plugins:
+  name: "플러그인"
+  none:
+    name: "없음"
+  diffusion:
+    name: "디퓨전 모델"
+    speaker:
+      label: "화자"
+      tooltip: "화자 ID, 예: 0, 1, 2"
+    sample_method:
+      label: "샘플링 알고리즘"
+      tooltip: "none: 샘플링 안 함, PLMS: 빠른 샘플링"
+    sample_interval:
+      label: "샘플링 간격"
+      tooltip: "샘플을 취하는 간격 (숫자가 클수록 빠르나 품질은 저하됨)"
+    skip_steps:
+      label: "단계 건너뛰기"
+      tooltip: "얕은 디퓨전 관련 설정으로, 970단계를 건너 뛰어 전자음을 제거하되 성능에 영향을 주지 않음"
+  hifisinger:
+    name: "HiFiSinger"
+    speaker:
+      label: "화자"
+      tooltip: "화자 ID, 예: 0, 1, 2"
+  rvc:
+    name: "RVC"
+    speaker:
+      label: "화자"
+      tooltip: "화자 ID, 예: 0, 1, 2"
+    index_ratio:
+      label: "인덱스 비율"
+      tooltip: "TODO: 추가 정보 작성 필요"
