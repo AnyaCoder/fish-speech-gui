@@ -7,6 +7,21 @@ theme:
   light: "라이트 모드"
   dark: "다크 모드"
 
+tab:
+  page1: "기본 설정"
+  page2: "텍스트 음성 변환"
+
+text_editor:
+  input_help: "ctrl+m을 눌러 빠른 감정 삽입 도구를 불러옵니다."
+  rich_help: "심미적으로 더 보기 좋은 감정 임베디드 텍스트는 다음과 같습니다."
+  font_size: "폰트 크기"
+  font_family: "폰트 패밀리"
+  rich_effect: "리치 텍스트 효과 표시"
+
+emo_selector:
+  name: "감정 선택기"
+  placeholder: "감성 키워드 입력..."
+
 i18n:
   language: "언어"
   restart_msg: "설정이 변경되었습니다. 변경 사항을 적용하려면 애플리케이션을 재시작하시겠습니까?"

@@ -7,6 +7,21 @@ theme:
   light: "亮色"
   dark: "暗色"
 
+tab:
+  page1: "基本设置"
+  page2: "文本转语音"
+
+text_editor:
+  input_help: "按下ctrl+m键呼出快捷插入情绪工具"
+  rich_help: "这里显示更为美观的情绪嵌入文本"
+  font_size: "字体大小"
+  font_family: "字体样式"
+  rich_effect: "显示富文本效果"
+
+emo_selector:
+  name: "情绪选择器"
+  placeholder: "输入情绪关键词..."
+
 i18n:
   language: "语言"
   restart_msg: "配置已更改，是否要重新启动应用程序以使其生效?"

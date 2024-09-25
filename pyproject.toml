@@ -1,6 +1,6 @@
 [project]
 name = "fish-speech-gui"
-version = "0.1.0"
+version = "1.0.0"
 description = "fish-speech comfortable GUI"
 readme = "README.md"
 requires-python = "<3.12,>=3.10"

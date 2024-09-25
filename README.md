@@ -1,6 +1,12 @@
 # fish-speech-gui
 
-<img src="fish/assets/example.png" width="800" />
+## Basic Setup
+
+<img src="fish/assets/example_1_basic.png" width="800" />
+
+## Text to Speech
+
+<img src="fish/assets/example_1_tts.png" width="800" />
 
 # Build from Source
 
@@ -10,6 +16,13 @@ conda activate pyqt
 pip install pdm
 pdm install
 pdm run build.py
+```
+
+# Debug
+
+```bash
+conda activate pyqt
+python fish/__main__.py
 ```
 
 # Run

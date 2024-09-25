@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSlider,
-    QTextEdit,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -35,6 +35,7 @@ from fish.audio import ServeReferenceAudio, ServeTTSRequest, get_devices
 from fish.config import application_path, config, load_config, save_config
 from fish.file import *
 from fish.i18n import _t, language_map
+from fish.input import TextEditorWidget
 
 
 class MainWindow(QWidget):
@@ -49,18 +50,16 @@ class MainWindow(QWidget):
         self.setWindowTitle(_t("title").format(version=version))
 
         self.main_layout = QVBoxLayout()
+        self.tab_widget = QTabWidget()
+
+        self.tab_widget.addTab(self.create_settings_tab1(), _t("tab.page1"))
+        self.tab_widget.addTab(self.create_settings_tab2(), _t("tab.page2"))
+
         # Stick to the top
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.main_layout.addWidget(self.tab_widget)
+        self.setup_action_buttons(self.main_layout)
 
-        self.setup_ui_settings()
-        self.setup_backend_settings()
-        self.setup_device_settings()
-        self.setup_audio_settings()
-        self.setup_reference_settings()
-        self.setup_textinput_settings()
-        self.setup_audioplayer_settings()
-
-        self.setup_action_buttons()
         self.setLayout(self.main_layout)
 
         # Use size hint to set a reasonable size
@@ -68,6 +67,29 @@ class MainWindow(QWidget):
         self.center()
 
         self.files = []
+
+    def create_settings_tab1(self):
+        tab1 = QWidget()
+        layout1 = QVBoxLayout()
+
+        self.setup_ui_settings(layout1)
+        self.setup_backend_settings(layout1)
+        self.setup_device_settings(layout1)
+        self.setup_audio_settings(layout1)
+        self.setup_reference_settings(layout1)
+
+        tab1.setLayout(layout1)
+        return tab1
+
+    def create_settings_tab2(self):
+        tab2 = QWidget()
+        layout2 = QVBoxLayout()
+
+        self.setup_textinput_settings(layout2)
+        self.setup_audioplayer_settings(layout2)
+
+        tab2.setLayout(layout2)
+        return tab2
 
     def center(self):
         screen = QApplication.primaryScreen()
@@ -77,7 +99,7 @@ class MainWindow(QWidget):
         y = (screen_geometry.height() - window_geometry.height()) // 4
         self.move(x, y)
 
-    def setup_ui_settings(self):
+    def setup_ui_settings(self, layout: QVBoxLayout):
         # we have language and backend settings in the first row
         row = QHBoxLayout()
         row.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -115,9 +137,9 @@ class MainWindow(QWidget):
         self.load_button.clicked.connect(self.load_config)
         row.addWidget(self.load_button)
 
-        self.main_layout.addLayout(row)
+        layout.addLayout(row)
 
-    def setup_device_settings(self):
+    def setup_device_settings(self, layout: QVBoxLayout):
         # second row: a group box for audio device settings
         row = QGroupBox(_t("audio_device.name"))
         row_layout = QGridLayout()
@@ -165,12 +187,11 @@ class MainWindow(QWidget):
 
         self.input_device_combo.setFixedWidth(300)
         row_layout.addWidget(self.output_device_combo, 1, 1)
-
+        row.setMaximumHeight(100)
         row.setLayout(row_layout)
+        layout.addWidget(row)
 
-        self.main_layout.addWidget(row)
-
-    def setup_audio_settings(self):
+    def setup_audio_settings(self, layout: QVBoxLayout):
         # third row: a group box for audio settings
         row = QGroupBox(_t("audio.name"))
         row_layout = QGridLayout()
@@ -193,7 +214,8 @@ class MainWindow(QWidget):
 
         row_layout.addWidget(QLabel(_t("audio.max_new_tokens")), 0, 3)
         self.max_new_tokens_slider = QSlider(Qt.Orientation.Horizontal)
-        self.max_new_tokens_slider.setMinimum(1024)
+        self.max_new_tokens_slider.setToolTip("0 means no limit")
+        self.max_new_tokens_slider.setMinimum(0)
         self.max_new_tokens_slider.setMaximum(4096)
         self.max_new_tokens_slider.setSingleStep(128)
         self.max_new_tokens_slider.setTickInterval(128)
@@ -270,9 +292,10 @@ class MainWindow(QWidget):
         row_layout.addWidget(self.mp3_bitrate_combo, 2, 4)
 
         row.setLayout(row_layout)
-        self.main_layout.addWidget(row)
+        row.setMaximumHeight(200)
+        layout.addWidget(row)
 
-    def setup_reference_settings(self):
+    def setup_reference_settings(self, layout: QVBoxLayout):
         row = QGroupBox()
         row.setTitle(_t("reference.name"))
         row_layout = QGridLayout()
@@ -288,8 +311,7 @@ class MainWindow(QWidget):
 
         self.file_list_widget = QListWidget()
         # self.file_list_widget.setFixedWidth(300)
-        self.file_list_widget.setMinimumHeight(50)
-        self.file_list_widget.setMaximumHeight(100)
+        self.file_list_widget.setMinimumHeight(100)
         self.file_list_widget.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
@@ -308,26 +330,19 @@ class MainWindow(QWidget):
         row_layout.addWidget(self.upload_button, 3, 2, 1, 1)
 
         row.setLayout(row_layout)
-        self.main_layout.addWidget(row)
+        layout.addWidget(row)
 
-    def setup_textinput_settings(self):
+    def setup_textinput_settings(self, layout: QVBoxLayout):
         row = QGroupBox()
         row.setTitle(_t("tts_input.name"))
-        row.setFixedHeight(150)
+
         row_layout = QGridLayout()
-        self.text_edit = QTextEdit()
-
-        self.text_edit.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
-        self.text_edit.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self.text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        row_layout.addWidget(self.text_edit, 0, 0)
-
+        self.text_editor = TextEditorWidget()
+        row_layout.addWidget(self.text_editor)
         row.setLayout(row_layout)
-        self.main_layout.addWidget(row)
+        layout.addWidget(row)
 
-    def setup_audioplayer_settings(self):
+    def setup_audioplayer_settings(self, layout: QVBoxLayout):
         row = QGroupBox()
         row.setTitle(_t("tts_output.name"))
         row_layout = QGridLayout()
@@ -370,7 +385,7 @@ class MainWindow(QWidget):
 
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
         self.speed_slider.setRange(50, 200)  # 50% 到 200% 的播放速率
-        self.speed_slider.setValue(100)  # 初始速率为 100%
+        self.speed_slider.setValue(config.speed)  # 初始速率为 100%
         self.speed_slider.sliderMoved.connect(self.set_speed)
         row_layout.addWidget(
             QLabel(_t("tts_output.speed") + " >>"),
@@ -400,14 +415,14 @@ class MainWindow(QWidget):
         self.save_audio_path.setPlaceholderText(_t("tts_output.save_audio_input"))
         self.save_audio_path.setText(f"{config.save_path}")
         row_layout.addWidget(self.save_audio_path, 3, 1, 1, 4)
-
+        row.setMaximumHeight(200)
         row.setLayout(row_layout)
 
         self.player.positionChanged.connect(self.update_position)
         self.player.durationChanged.connect(self.update_duration)
-        self.main_layout.addWidget(row)
+        layout.addWidget(row)
 
-    def setup_backend_settings(self):
+    def setup_backend_settings(self, layout: QVBoxLayout):
         widget = QGroupBox()
         widget.setTitle(_t("backend.title"))
         row = QHBoxLayout()
@@ -431,9 +446,10 @@ class MainWindow(QWidget):
         row.addWidget(self.test_button)
 
         widget.setLayout(row)
-        self.main_layout.addWidget(widget)
+        widget.setMaximumHeight(100)
+        layout.addWidget(widget)
 
-    def setup_action_buttons(self):
+    def setup_action_buttons(self, layout: QVBoxLayout):
         row = QWidget()
         row_layout = QHBoxLayout()
         self.now_audio = QLabel(_t("action.audio").format(audio_name="(null)"))
@@ -452,8 +468,9 @@ class MainWindow(QWidget):
         self.latency_label = QLabel(_t("action.latency").format(latency=0))
         row_layout.addWidget(self.latency_label)
 
+        row.setMaximumHeight(100)
         row.setLayout(row_layout)
-        self.main_layout.addWidget(row)
+        layout.addWidget(row)
 
     def change_theme(self, index):
         config.theme = self.theme_combo.itemData(index)
@@ -537,6 +554,10 @@ class MainWindow(QWidget):
         config.mp3_bitrate = int(self.mp3_bitrate_combo.currentText())
         config.ref_id = self.ref_id_input.text()
         config.save_path = self.save_audio_path.text()
+        config.speed = self.speed_slider.value()
+        config.volume = self.volume_slider.value()
+        config.font_size = self.text_editor.font_size_spin.value()
+        config.font_family = self.text_editor.font_combo.currentText()
 
         save_config()
 
@@ -645,7 +666,7 @@ class MainWindow(QWidget):
         self.stop_button.setEnabled(True)
 
         now = datetime.datetime.now()
-        text = self.text_edit.toPlainText()
+        text = self.text_editor.input_edit.toPlainText()
 
         audio_name = now.strftime("%Y%m%d_%H%M%S") + "_" + text[:5]
         audio_path = Path(self.save_audio_path.text()) / f"{audio_name}.mp3"

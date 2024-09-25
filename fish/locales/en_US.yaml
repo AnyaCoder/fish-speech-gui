@@ -7,6 +7,21 @@ theme:
   light: "Light"
   dark: "Dark"
 
+tab:
+  page1: "Basic Setup"
+  page2: "Text to Speech"
+
+text_editor:
+  input_help: "Press ctrl+m to call out the Quick Insert Emotion tool"
+  rich_help: "The more aesthetically pleasing sentiment embedded text is shown here"
+  font_size: "Font Size"
+  font_family: "Font Family"
+  rich_effect: "Show Rich Text Effect"
+
+emo_selector:
+  name: "Emotion Selector"
+  placeholder: "Enter emotional keywords..."
+
 i18n:
   language: "Language"
   restart_msg: "Configuration changed, do you want to restart the app to take effect?"

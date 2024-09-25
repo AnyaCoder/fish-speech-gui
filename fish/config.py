@@ -29,8 +29,8 @@ class Config:
     mp3_bitrate: int = 64
     opus_bitrate: int = -1000
 
-    chunk_length: int = 100
-    max_new_tokens: int = 1024
+    chunk_length: int = 200
+    max_new_tokens: int = 0
     top_p: int = 700
     repetition_penalty: int = 1200
     temperature: int = 700
@@ -38,6 +38,9 @@ class Config:
     sample_rate: int = 44100
     volume: int = 50
     speed: int = 100
+
+    font_size: int = 10
+    font_family: str = "Microsoft YaHei UI"
 
     # Plugins
     current_plugin: str | None = None
