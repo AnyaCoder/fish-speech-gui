@@ -147,17 +147,16 @@ class TextEditorWidget(QWidget):
             self.input_edit.toPlainText().replace("\n", "<br>").replace(" ", "&nbsp;")
         )
 
-        # 定义替换函数
         def replace_emotion(match):
-            emotion = match.group(1)  # 获取情绪标签
+            emotion = match.group(1)
             if emotion in emotions:
                 data = emotions[emotion]
-                following_text = match.group(2)  # 获取跟随的文本
+                following_text = match.group(2)
                 return (
                     f'<span style="background-color: {data["color"]}; color: black;">'
                     f'{data["emoji"]} {following_text}</span>'
                 )
-            return match.group(0)  # 返回原始文本
+            return match.group(0)  # return raw text
 
         # 修改正则表达式，捕获后续文本
         pattern = r"\[INST\](.*?)\[\/INST\](.*?)(?=\[INST\]|$|<br>)"
