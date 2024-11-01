@@ -128,3 +128,117 @@ plugins:
     index_ratio:
       label: "Index Ratio"
       tooltip: "TODO: Supplement Information"
+
+console:
+  empty: "Empty Console"
+
+task:
+  browse: "Browse"
+  input_dir:
+    name: "Input Directory:"
+    error_title: "Invalid Input Dir"
+    error_msg: "Please select a valid input directory."
+    placeholder: "{name}: Select the input directory"
+  output_dir:
+    name: "Output Directory:"
+    placeholder: "{name}: Select the output directory"
+  start_btn: "Start {name}"
+  stop_btn: "Stop {name}"
+  running:
+    name: "Task Running"
+    info: "A {name} task is already running."
+  stop:
+    name: "Task Stopped"
+    info: "The {name} task has been stopped."
+  none:
+    name: "No Running Task"
+    info: "There is no running {name} task to stop."
+  complete:
+    name: "Task {name} Completed"
+
+worker:
+  f_signal:
+    complete: "Command {cmd} finished with exit code {exit_code}."
+    error: "Exception occurred: {e}"
+    stop: "Process stopped."
+
+FAPWidget:
+  rc: "Search Recursively"
+  oc: "Overwrite Existing Files"
+  cc: "Clean Output Directory Before Processing"
+
+FAPToWavWidget:
+  name: "To WAV"
+  title: "FAP To WAV Settings"
+  max_length: "Max Length (s):"
+
+FAPResampleWidget:
+  name: "Resample"
+  title: "FAP Resample Settings"
+  sampling_rate: "Sampling Rate (Hz):"
+  num_workers: "Number of Workers:"
+
+FAPLoudNormWidget:
+  name: "Loud Norm"
+  title: "FAP Loudness Normalization Settings"
+  peak: "Peak (dB):"
+  peak_tooltip: "Set the peak normalization level in dB."
+  loudness: "Loudness (LUFS):"
+  loudness_tooltip: "Set the loudness normalization level in LUFS."
+  block_size: "Block Size (s):"
+  block_size_tooltip: "Set the block size for processing in seconds."
+  workers: "Workers:"
+  workers_tooltip: "Set the number of workers for parallel processing."
+  start_tooltip: "Start loudness normalization."
+  stop_tooltip: "Stop loudness normalization."
+
+FAPSeparateWidget:
+  name: "Separate"
+  title: "FAP Separate Settings"
+  track: "Tracks to Keep:"
+  model: "Model to Use:"
+  shifts: "Number of Shifts:"
+  workers_per_gpu: "Workers per GPU:"
+
+FAPSliceAudioWidget:
+  name: "Slice Audio"
+  title: "FAP Slice Audio Settings"
+  min_duration: "Min Duration (s):"
+  max_duration: "Max Duration (s):"
+  min_silence: "Min Silence (s):"
+  workers: "Workers:"
+  speech_pad: "Speech Pad (s):"
+  flat_layout: "Use Flat Directory Structure"
+  merge_short: "Merge Short Slices Automatically"
+
+FAPTranscribeWidget:
+  name: "Transcribe"
+  title: "FAP Transcribe Settings"
+  workers: "Number of Workers:"
+  language: "Language:"
+  model_size: "Model Size:"
+  model_type: "Model Type:"
+  compute_type: "Compute Type:"
+  batch_size: "Batch Size:"
+
+FAPLengthStatWidget:
+  name: "Audio Length Statistics"
+  title: "FAP Length Settings"
+  visualize: "Visualize Distribution"
+  accurate: "Use Accurate Mode"
+  long_threshold: "Long Threshold (s):"
+  short_threshold: "Short Threshold (s):"
+  workers: "Number of Workers:"
+
+FAPFrequencyStatWidget:
+  name: "Frequency Analysis"
+  title: "FAP Frequency Settings"
+  visualize: "Visualize Distribution"
+  workers: "Number of Workers:"
+
+FAPMergeLabWidget:
+  name: "Merge Lab Files"
+  title: "FAP Merge Lab Settings"
+  output_filepath: "Output FilePath:"
+  output_placeholder: "{name}: Select a filepath"
+  template: "Template:"

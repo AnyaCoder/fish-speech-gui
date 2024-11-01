@@ -172,7 +172,7 @@ class MainWindow(QMainWindow):
     def create_settings_tab6(self):
         tab6 = QWidget()
         layout6 = QVBoxLayout()
-        self.clear_button = QPushButton("Empty Console")
+        self.clear_button = QPushButton(_t("console.empty"))
         self.clear_button.clicked.connect(self.console_widget.clear_console)
         layout6 = QVBoxLayout()
         layout6.addWidget(self.clear_button)

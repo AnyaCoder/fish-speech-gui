@@ -28,6 +28,11 @@ i18n:
 
 backend:
   title: "백엔드 설정"
+  python_path: "Python 인터프리터"
+  python_info: "예: D:\\miniconda3\\envs\\fish\\python.exe"
+  python_tooltip: "기본값: 내장 Python 인터프리터"
+  select_py: "구성"
+  test_py: "Python 테스트"
   api_key: "API 키"
   api_info: "온라인 서비스에서만 사용됩니다"
   name: "백엔드"
@@ -118,3 +123,117 @@ plugins:
     index_ratio:
       label: "인덱스 비율"
       tooltip: "TODO: 추가 정보 작성 필요"
+
+console:
+  empty: "빈 콘솔"
+
+task:
+  browse: "찾아보기"
+  input_dir:
+    name: "입력 디렉토리:"
+    error_title: "잘못된 입력 디렉토리"
+    error_msg: "유효한 입력 디렉토리를 선택하세요."
+    placeholder: "{name}: 입력 디렉토리를 선택하세요"
+  output_dir:
+    name: "출력 디렉토리:"
+    placeholder: "{name}: 출력 디렉토리를 선택하세요"
+  start_btn: "{name} 시작"
+  stop_btn: "{name} 중지"
+  running:
+    name: "작업 실행 중"
+    info: "{name} 작업이 이미 실행 중입니다."
+  stop:
+    name: "작업 중지됨"
+    info: "{name} 작업이 중지되었습니다."
+  none:
+    name: "실행 중인 작업 없음"
+    info: "중지할 실행 중인 {name} 작업이 없습니다."
+  complete:
+    name: "작업 {name} 완료됨"
+
+worker:
+  f_signal:
+    complete: "명령 {cmd}이(가) 종료 코드 {exit_code}로 완료되었습니다."
+    error: "예외 발생: {e}"
+    stop: "프로세스가 중지되었습니다."
+
+FAPWidget:
+  rc: "재귀적으로 검색"
+  oc: "기존 파일 덮어쓰기"
+  cc: "처리 전 출력 디렉토리 정리"
+
+FAPToWavWidget:
+  name: "WAV 변환"
+  title: "FAP WAV 변환 설정"
+  max_length: "최대 길이 (초):"
+
+FAPResampleWidget:
+  name: "재샘플링"
+  title: "FAP 재샘플링 설정"
+  sampling_rate: "샘플링 속도 (Hz):"
+  num_workers: "작업자 수:"
+
+FAPLoudNormWidget:
+  name: "음량 정규화"
+  title: "FAP 음량 정규화 설정"
+  peak: "피크 (dB):"
+  peak_tooltip: "dB 단위로 피크 정규화 수준 설정."
+  loudness: "음량 (LUFS):"
+  loudness_tooltip: "LUFS 단위로 음량 정규화 수준 설정."
+  block_size: "블록 크기 (초):"
+  block_size_tooltip: "처리를 위한 블록 크기 (초) 설정."
+  workers: "작업자:"
+  workers_tooltip: "병렬 처리를 위한 작업자 수 설정."
+  start_tooltip: "음량 정규화 시작."
+  stop_tooltip: "음량 정규화 중지."
+
+FAPSeparateWidget:
+  name: "분리"
+  title: "FAP 분리 설정"
+  track: "유지할 트랙:"
+  model: "사용할 모델:"
+  shifts: "이동 횟수:"
+  workers_per_gpu: "GPU당 작업자 수:"
+
+FAPSliceAudioWidget:
+  name: "오디오 분할"
+  title: "FAP 오디오 분할 설정"
+  min_duration: "최소 길이 (초):"
+  max_duration: "최대 길이 (초):"
+  min_silence: "최소 무음 시간 (초):"
+  workers: "작업자:"
+  speech_pad: "음성 패드 (초):"
+  flat_layout: "평면 디렉토리 구조 사용"
+  merge_short: "짧은 분할 자동 병합"
+
+FAPTranscribeWidget:
+  name: "음성 변환"
+  title: "FAP 음성 변환 설정"
+  workers: "작업자 수:"
+  language: "언어:"
+  model_size: "모델 크기:"
+  model_type: "모델 유형:"
+  compute_type: "계산 유형:"
+  batch_size: "배치 크기:"
+
+FAPLengthStatWidget:
+  name: "오디오 길이 통계"
+  title: "FAP 길이 설정"
+  visualize: "분포 시각화"
+  accurate: "정확 모드 사용"
+  long_threshold: "긴 오디오 임계값 (초):"
+  short_threshold: "짧은 오디오 임계값 (초):"
+  workers: "작업자 수:"
+
+FAPFrequencyStatWidget:
+  name: "주파수 분석"
+  title: "FAP 주파수 설정"
+  visualize: "분포 시각화"
+  workers: "작업자 수:"
+
+FAPMergeLabWidget:
+  name: "Lab 파일 병합"
+  title: "FAP Lab 병합 설정"
+  output_filepath: "출력 파일 경로:"
+  output_placeholder: "{name}: 파일 경로 선택"
+  template: "템플릿:"

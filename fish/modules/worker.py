@@ -11,6 +11,7 @@ import psutil
 from PyQt6.QtCore import QMutex, QMutexLocker, QThread, QWaitCondition, pyqtSignal
 
 from fish.utils.audio import ServeReferenceAudio, ServeTTSRequest
+from fish.utils.i18n import _t
 
 env = os.environ.copy()
 env["MODELSCOPE_CACHE"] = os.path.join(os.environ.get("TEMP", "."), "funasr")
@@ -67,10 +68,12 @@ class SubprocessWorker(BaseWorker):
 
             exit_code = self.process.wait()
             self.finished_signal.emit(
-                f"Command {' '.join(self.command)} finished with exit code {exit_code}."
+                _t("worker.f_signal.complete").format(
+                    cmd=" ".join(self.command), exit_code=exit_code
+                )
             )
         except Exception as e:
-            self.finished_signal.emit(f"Exception occurred: {str(e)}")
+            self.finished_signal.emit(_t("worker.f_signal.error").format(e=str(e)))
             self.stop()
 
     def stop(self):
@@ -79,7 +82,7 @@ class SubprocessWorker(BaseWorker):
                 return
             self.is_running = False
         self.terminate_process()
-        self.finished_signal.emit("Process stopped.")
+        self.finished_signal.emit(_t("worker.f_signal.stop"))
 
     def terminate_process(self):
         if self.process:

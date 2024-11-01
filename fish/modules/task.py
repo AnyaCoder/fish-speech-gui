@@ -21,14 +21,22 @@ class BaseWidgetMixin(QWidget):
         self.name = name
         self.input_dir = QLineEdit()
         self.output_dir = QLineEdit()
-        self.input_dir.setPlaceholderText(f"{name}: Select the input directory")
-        self.output_dir.setPlaceholderText(f"{name}: Select the output directory")
+        self.input_dir.setPlaceholderText(
+            _t("task.input_dir.placeholder").format(name=name)
+        )
+        self.output_dir.setPlaceholderText(
+            _t("task.output_dir.placeholder").format(name=name)
+        )
 
     def browse_input_dir(self):
-        self._browse_directory(self.input_dir, "Select Input Directory")
+        self._browse_directory(
+            self.input_dir, _t("task.input_dir.placeholder").format(name=self.name)
+        )
 
     def browse_output_dir(self):
-        self._browse_directory(self.output_dir, "Select Output Directory")
+        self._browse_directory(
+            self.output_dir, _t("task.output_dir.placeholder").format(name=self.name)
+        )
 
     def _browse_directory(self, line_edit: QLineEdit, title: str):
         dir_path = QFileDialog.getExistingDirectory(self, title)
@@ -42,8 +50,8 @@ class TaskManagerMixin(BaseWidgetMixin):
         self.worker = None
         self.mutex = QMutex()
         self.console_widget = console_widget
-        self.start_button = QPushButton(f"Start {name}")
-        self.stop_button = QPushButton(f"Stop {name}")
+        self.start_button = QPushButton(_t("task.start_btn").format(name=self.name))
+        self.stop_button = QPushButton(_t("task.stop_btn").format(name=self.name))
         self.stop_button.setStyleSheet(STOP_BUTTON_QSS)
         self.stop_button.setEnabled(False)
         self.progress_bar = QProgressBar()
@@ -55,7 +63,9 @@ class TaskManagerMixin(BaseWidgetMixin):
         with QMutexLocker(self.mutex):
             if self.worker and self.worker.isRunning():
                 QMessageBox.warning(
-                    self, f"Task Running", f"A {self.name} task is already running."
+                    self,
+                    _t("task.running.name"),
+                    _t("task.running.info").format(name=self.name),
                 )
                 return False
 
@@ -74,14 +84,16 @@ class TaskManagerMixin(BaseWidgetMixin):
             if self.worker and self.worker.isRunning():
                 self.worker.stop()
                 QMessageBox.information(
-                    self, f"Task Stopped", f"The {self.name} task has been stopped."
+                    self,
+                    _t("task.stop.name"),
+                    _t("task.stop.info").format(name=self.name),
                 )
                 return True
             else:
                 QMessageBox.warning(
                     self,
-                    "No Running Task",
-                    f"There is no running {self.name} task to stop.",
+                    _t("task.none.name"),
+                    _t("task.none.info").format(name=self.name),
                 )
                 return False
 
@@ -98,6 +110,8 @@ class TaskManagerMixin(BaseWidgetMixin):
             self.console_widget.update_console(message, "white", newline=True)
 
     def on_task_finished(self, message):
-        QMessageBox.information(self, f"Task {self.name} Completed", message)
+        QMessageBox.information(
+            self, _t("task.complete.name").format(name=self.name), message
+        )
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)

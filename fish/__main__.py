@@ -7,7 +7,6 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 
 from fish.config import application_path, config
 from fish.gui import MainWindow
-from fish.modules.globals import FAP
 
 
 class SplashScreen(QtWidgets.QSplashScreen):

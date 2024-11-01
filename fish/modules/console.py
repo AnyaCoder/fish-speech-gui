@@ -1,7 +1,6 @@
 import sys
 import threading
 
-from loguru import logger
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QTextCharFormat, QTextCursor
 from PyQt6.QtWidgets import (
@@ -13,6 +12,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from fish.utils.i18n import _t
 
 
 class ConsoleStream(QObject):
@@ -61,7 +62,7 @@ class ConsoleWidget(QTextEdit):
             cursor.movePosition(QTextCursor.MoveOperation.Start)
             cursor.select(QTextCursor.SelectionType.BlockUnderCursor)
             cursor.removeSelectedText()
-            cursor.deleteChar()  # 删除换行符
+            cursor.deleteChar()
 
     def clear_console(self):
         self.clear()
@@ -72,7 +73,7 @@ class ConsoleDock(QDockWidget):
         super().__init__("Console", parent)
         self.console_widget = ConsoleWidget()
         self.setMinimumWidth(400)
-        self.clear_button = QPushButton("Empty Console")
+        self.clear_button = QPushButton(_t("console.empty"))
         self.clear_button.clicked.connect(self.console_widget.clear_console)
 
         layout = QVBoxLayout()

@@ -1,6 +1,6 @@
 # fish-speech-gui
 
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/AnyaCoder/fish-speech-gui/main.svg)](https://results.pre-commit.ci/latest/github/AnyaCoder/fish-speech-gui/main)
+[![linux_macos_packages](https://github.com/AnyaCoder/fish-speech-gui/blob/main/.github/workflows/ci.yml/badge.svg)](https://github.com/AnyaCoder/fish-speech-gui/blob/main/.github/workflows/ci.yml)
 
 ## Basic Setup
 

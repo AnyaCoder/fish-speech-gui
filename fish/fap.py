@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
-    QFileDialog,
     QGridLayout,
     QGroupBox,
     QLabel,
@@ -26,44 +25,46 @@ from fish.utils.i18n import _t
 
 class FAPToWavWidget(TaskManagerMixin):
     def __init__(self, console_widget: ConsoleWidget, python: QLineEdit):
-        super().__init__(console_widget, name="To WAV")
+        super().__init__(console_widget, name=_t("FAPToWavWidget.name"))
         layout = QVBoxLayout(self)
         self.setup_fap_to_wav_settings(layout)
         self.setLayout(layout)
         self.python = python
 
     def setup_fap_to_wav_settings(self, layout: QVBoxLayout):
-        row = QGroupBox("FAP To WAV Settings")
+        row = QGroupBox(_t("FAPToWavWidget.title"))
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-        row_layout.addWidget(QLabel("Input Directory:"), 0, *LINE_ALLOC[0][0])
+        row_layout.addWidget(QLabel(_t("task.input_dir.name")), 0, *LINE_ALLOC[0][0])
         row_layout.addWidget(self.input_dir, 0, *LINE_ALLOC[0][1])
-        input_browse_button = QPushButton("Browse")
+        input_browse_button = QPushButton(_t("task.browse"))
         input_browse_button.clicked.connect(self.browse_input_dir)
         row_layout.addWidget(input_browse_button, 0, *LINE_ALLOC[0][2])
 
-        row_layout.addWidget(QLabel("Output Directory:"), 1, *LINE_ALLOC[1][0])
+        row_layout.addWidget(QLabel(_t("task.output_dir.name")), 1, *LINE_ALLOC[1][0])
         row_layout.addWidget(self.output_dir, 1, *LINE_ALLOC[1][1])
-        output_browse_button = QPushButton("Browse")
+        output_browse_button = QPushButton(_t("task.browse"))
         output_browse_button.clicked.connect(self.browse_output_dir)
         row_layout.addWidget(output_browse_button, 1, *LINE_ALLOC[1][2])
 
-        row_layout.addWidget(QLabel("Max Length (s):"), 2, *LINE_ALLOC[2][0])
+        row_layout.addWidget(
+            QLabel(_t("FAPToWavWidget.max_length")), 2, *LINE_ALLOC[2][0]
+        )
         self.segment_spin = QSpinBox()
         self.segment_spin.setRange(0, 60 * 60)
         self.segment_spin.setValue(0)
         row_layout.addWidget(self.segment_spin, 2, *LINE_ALLOC[2][1])
 
-        self.recursive_check = QCheckBox("Search Recursively")
+        self.recursive_check = QCheckBox(_t("FAPWidget.rc"))
         self.recursive_check.setChecked(True)
         row_layout.addWidget(self.recursive_check, 3, *LINE_ALLOC[3][0])
 
-        self.overwrite_check = QCheckBox("Overwrite Existing Files")
+        self.overwrite_check = QCheckBox(_t("FAPWidget.oc"))
         self.overwrite_check.setChecked(False)
         row_layout.addWidget(self.overwrite_check, 3, *LINE_ALLOC[3][1])
 
-        self.clean_check = QCheckBox("Clean Output Directory Before Processing")
+        self.clean_check = QCheckBox(_t("FAPWidget.cc"))
         self.clean_check.setChecked(False)
         row_layout.addWidget(self.clean_check, 3, *LINE_ALLOC[3][2])
 
@@ -83,7 +84,9 @@ class FAPToWavWidget(TaskManagerMixin):
 
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
-                self, "Invalid Input Dir", "Please select a valid input directory."
+                self,
+                _t("modules.task.input_dir.error_title"),
+                _t("modules.task.input_dir.error_msg"),
             )
             return
         if not output_dir or not Path(output_dir).is_dir():
@@ -121,59 +124,61 @@ class FAPToWavWidget(TaskManagerMixin):
 
 class FAPResampleWidget(TaskManagerMixin):
     def __init__(self, console_widget: ConsoleWidget, python: QLineEdit):
-        super().__init__(console_widget, name="Resample")
+        super().__init__(console_widget, name=_t("FAPResampleWidget.name"))
         layout = QVBoxLayout(self)
         self.setup_fap_resample_settings(layout)
         self.setLayout(layout)
         self.python = python
 
     def setup_fap_resample_settings(self, layout: QVBoxLayout):
-        row = QGroupBox("FAP Resample Settings")
+        row = QGroupBox(_t("FAPResampleWidget.title"))
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-        row_layout.addWidget(QLabel("Input Directory:"), 0, *LINE_ALLOC[0][0])
+        row_layout.addWidget(QLabel(_t("task.input_dir.name")), 0, *LINE_ALLOC[0][0])
         row_layout.addWidget(self.input_dir, 0, *LINE_ALLOC[0][1])
-        input_browse_button = QPushButton("Browse")
+        input_browse_button = QPushButton(_t("task.browse"))
         input_browse_button.clicked.connect(self.browse_input_dir)
         row_layout.addWidget(input_browse_button, 0, *LINE_ALLOC[0][2])
 
-        row_layout.addWidget(QLabel("Output Directory:"), 1, *LINE_ALLOC[1][0])
+        row_layout.addWidget(QLabel(_t("task.output_dir.name")), 1, *LINE_ALLOC[1][0])
         row_layout.addWidget(self.output_dir, 1, *LINE_ALLOC[1][1])
-        output_browse_button = QPushButton("Browse")
+        output_browse_button = QPushButton(_t("task.browse"))
         output_browse_button.clicked.connect(self.browse_output_dir)
         row_layout.addWidget(output_browse_button, 1, *LINE_ALLOC[1][2])
 
-        row_layout.addWidget(QLabel("Sampling Rate (Hz):"), 2, *LINE_ALLOC[2][0])
+        row_layout.addWidget(
+            QLabel(_t("FAPResampleWidget.sampling_rate")), 2, *LINE_ALLOC[2][0]
+        )
         self.sampling_rate_combo = QComboBox()
         self.sampling_rate_combo.addItems(["44100", "22050", "16000", "8000"])
         self.sampling_rate_combo.setCurrentText("44100")
         row_layout.addWidget(self.sampling_rate_combo, 2, *LINE_ALLOC[2][1])
 
-        row_layout.addWidget(QLabel("Number of Workers:"), 2, *LINE_ALLOC[2][2])
+        row_layout.addWidget(
+            QLabel(_t("FAPResampleWidget.num_workers")), 2, *LINE_ALLOC[2][2]
+        )
         self.num_workers_spin = QSpinBox()
-        self.num_workers_spin.setRange(1, 64)  # limit threads
+        self.num_workers_spin.setRange(1, 64)
         self.num_workers_spin.setValue(4)
         row_layout.addWidget(self.num_workers_spin, 2, *LINE_ALLOC[2][3])
 
-        self.recursive_check = QCheckBox("Search Recursively")
+        self.recursive_check = QCheckBox(_t("FAPWidget.rc"))
         self.recursive_check.setChecked(True)
         row_layout.addWidget(self.recursive_check, 3, *LINE_ALLOC[3][0])
 
-        self.overwrite_check = QCheckBox("Overwrite Existing Files")
+        self.overwrite_check = QCheckBox(_t("FAPWidget.oc"))
         self.overwrite_check.setChecked(False)
         row_layout.addWidget(self.overwrite_check, 3, *LINE_ALLOC[3][1])
 
-        self.clean_check = QCheckBox("Clean Output Directory Before Processing")
+        self.clean_check = QCheckBox(_t("FAPWidget.cc"))
         self.clean_check.setChecked(False)
         row_layout.addWidget(self.clean_check, 3, *LINE_ALLOC[3][2])
 
         self.start_button.clicked.connect(self.call_resample)
         row_layout.addWidget(self.start_button, 4, *LINE_ALLOC[3][0])
 
-        self.stop_button.setStyleSheet(STOP_BUTTON_QSS)
         self.stop_button.clicked.connect(self.stop_resample)
-        self.stop_button.setEnabled(False)
         row_layout.addWidget(self.stop_button, 4, *LINE_ALLOC[3][1])
         row_layout.addWidget(self.progress_bar, 4, *LINE_ALLOC[3][2])
 
@@ -186,7 +191,9 @@ class FAPResampleWidget(TaskManagerMixin):
 
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
-                self, "Invalid Input Dir", "Please select a valid input directory."
+                self,
+                _t("modules.task.input_dir.error_title"),
+                _t("modules.task.input_dir.error_msg"),
             )
             return
         if not output_dir or not Path(output_dir).is_dir():
@@ -228,90 +235,94 @@ class FAPResampleWidget(TaskManagerMixin):
 
 class FAPLoudNormWidget(TaskManagerMixin):
     def __init__(self, console_widget: ConsoleWidget, python: QLineEdit):
-        super().__init__(console_widget, name="Loud Norm")
+        super().__init__(console_widget, name=_t("FAPLoudNormWidget.name"))
         layout = QVBoxLayout(self)
         self.setup_fap_loud_norm_settings(layout)
         self.setLayout(layout)
         self.python = python
 
     def setup_fap_loud_norm_settings(self, layout: QVBoxLayout):
-        row = QGroupBox("FAP Loudness Normalization Settings")
+        row = QGroupBox(_t("FAPLoudNormWidget.title"))
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         # Input Dir
-        row_layout.addWidget(QLabel("Input Directory:"), 0, *LINE_ALLOC[0][0])
+        row_layout.addWidget(QLabel(_t("task.input_dir.name")), 0, *LINE_ALLOC[0][0])
         row_layout.addWidget(self.input_dir, 0, *LINE_ALLOC[0][1])
-        input_browse_button = QPushButton("Browse")
-        input_browse_button.setToolTip("Browse the input directory.")
+        input_browse_button = QPushButton(_t("task.browse"))
+        input_browse_button.setToolTip(_t("task.input_dir.tooltip"))
         input_browse_button.clicked.connect(self.browse_input_dir)
         row_layout.addWidget(input_browse_button, 0, *LINE_ALLOC[0][2])
 
         # Output Directory
-        row_layout.addWidget(QLabel("Output Dir:"), 1, *LINE_ALLOC[1][0])
+        row_layout.addWidget(QLabel(_t("task.output_dir.name")), 1, *LINE_ALLOC[1][0])
         row_layout.addWidget(self.output_dir, 1, *LINE_ALLOC[1][1])
-        output_browse_button = QPushButton("Browse")
-        output_browse_button.setToolTip("Browse the output directory.")
+        output_browse_button = QPushButton(_t("task.browse"))
+        output_browse_button.setToolTip(_t("task.output_dir.tooltip"))
         output_browse_button.clicked.connect(self.browse_output_dir)
         row_layout.addWidget(output_browse_button, 1, *LINE_ALLOC[1][2])
 
         # Peak Normalize
-        row_layout.addWidget(QLabel("Peak (dB):"), 2, *LINE_ALLOC[2][0])
+        row_layout.addWidget(QLabel(_t("FAPLoudNormWidget.peak")), 2, *LINE_ALLOC[2][0])
         self.peak_spin = QDoubleSpinBox()
         self.peak_spin.setRange(-100.0, 0.0)
         self.peak_spin.setValue(-1.0)
-        self.peak_spin.setToolTip("Set the peak normalization level in dB.")
+        self.peak_spin.setToolTip(_t("FAPLoudNormWidget.peak_tooltip"))
         row_layout.addWidget(self.peak_spin, 2, *LINE_ALLOC[2][1])
 
         # Loudness Normalize
-        row_layout.addWidget(QLabel("Loudness (LUFS):"), 2, *LINE_ALLOC[2][2])
+        row_layout.addWidget(
+            QLabel(_t("FAPLoudNormWidget.loudness")), 2, *LINE_ALLOC[2][2]
+        )
         self.loudness_spin = QDoubleSpinBox()
         self.loudness_spin.setRange(-100.0, 0.0)
         self.loudness_spin.setValue(-23.0)
-        self.loudness_spin.setToolTip("Set the loudness normalization level in LUFS.")
+        self.loudness_spin.setToolTip(_t("FAPLoudNormWidget.loudness_tooltip"))
         row_layout.addWidget(self.loudness_spin, 2, *LINE_ALLOC[2][3])
 
         # Block Size
-        row_layout.addWidget(QLabel("Block Size (s):"), 3, *LINE_ALLOC[2][0])
+        row_layout.addWidget(
+            QLabel(_t("FAPLoudNormWidget.block_size")), 3, *LINE_ALLOC[2][0]
+        )
         self.block_size_spin = QDoubleSpinBox()
         self.block_size_spin.setRange(0.1, 10.0)
         self.block_size_spin.setValue(0.4)
-        self.block_size_spin.setToolTip("Set the block size for processing in seconds.")
+        self.block_size_spin.setToolTip(_t("FAPLoudNormWidget.block_size_tooltip"))
         row_layout.addWidget(self.block_size_spin, 3, *LINE_ALLOC[2][1])
 
         # Number of Workers
-        row_layout.addWidget(QLabel("Workers:"), 3, *LINE_ALLOC[2][2])
+        row_layout.addWidget(
+            QLabel(_t("FAPLoudNormWidget.workers")), 3, *LINE_ALLOC[2][2]
+        )
         self.num_workers_spin = QSpinBox()
         self.num_workers_spin.setRange(1, 64)
         self.num_workers_spin.setValue(32)
-        self.num_workers_spin.setToolTip(
-            "Set the number of workers for parallel processing."
-        )
+        self.num_workers_spin.setToolTip(_t("FAPLoudNormWidget.workers_tooltip"))
         row_layout.addWidget(self.num_workers_spin, 3, *LINE_ALLOC[2][3])
 
         # Recursive Check
-        self.recursive_check = QCheckBox("Search Recursively")
+        self.recursive_check = QCheckBox(_t("FAPWidget.rc"))
         self.recursive_check.setChecked(True)
         row_layout.addWidget(self.recursive_check, 4, *LINE_ALLOC[3][0])
 
         # Overwrite Check
-        self.overwrite_check = QCheckBox("Overwrite Existing Files")
+        self.overwrite_check = QCheckBox(_t("FAPWidget.oc"))
         self.overwrite_check.setChecked(False)
         row_layout.addWidget(self.overwrite_check, 4, *LINE_ALLOC[3][1])
 
         # Clean Check
-        self.clean_check = QCheckBox("Clean Output Directory Before Processing")
+        self.clean_check = QCheckBox(_t("FAPWidget.cc"))
         self.clean_check.setChecked(False)
         row_layout.addWidget(self.clean_check, 4, *LINE_ALLOC[3][2])
 
         # Start Button
-        self.start_button.setToolTip("Start loudness normalization.")
+        self.start_button.setToolTip(_t("FAPLoudNormWidget.start_tooltip"))
         self.start_button.clicked.connect(self.call_loud_norm)
         row_layout.addWidget(self.start_button, 5, *LINE_ALLOC[3][0])
 
         # Stop Button
         self.stop_button.setStyleSheet(STOP_BUTTON_QSS)
-        self.stop_button.setToolTip("Stop loudness normalization.")
+        self.stop_button.setToolTip(_t("FAPLoudNormWidget.stop_tooltip"))
         self.stop_button.clicked.connect(self.stop_loud_norm)
         self.stop_button.setEnabled(False)
         row_layout.addWidget(self.stop_button, 5, *LINE_ALLOC[3][1])
@@ -327,8 +338,8 @@ class FAPLoudNormWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                "Invalid Input Directory",
-                "Please select a valid input directory.",
+                _t("modules.task.input_dir.error_title"),
+                _t("modules.task.input_dir.error_msg"),
             )
             return
         if not output_dir or not Path(output_dir).is_dir():
@@ -375,71 +386,79 @@ class FAPLoudNormWidget(TaskManagerMixin):
 
 class FAPSeparateWidget(TaskManagerMixin):
     def __init__(self, console_widget: ConsoleWidget, python: QLineEdit):
-        super().__init__(console_widget, name="Separate")
+        super().__init__(console_widget, name=_t("FAPSeparateWidget.name"))
         layout = QVBoxLayout(self)
         self.setup_fap_separate_settings(layout)
         self.setLayout(layout)
         self.python = python
 
     def setup_fap_separate_settings(self, layout: QVBoxLayout):
-        row = QGroupBox("FAP Separate Settings")
+        row = QGroupBox(_t("FAPSeparateWidget.title"))
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-        row_layout.addWidget(QLabel("Input Directory:"), 0, *LINE_ALLOC[0][0])
+        row_layout.addWidget(QLabel(_t("task.input_dir.name")), 0, *LINE_ALLOC[0][0])
         row_layout.addWidget(self.input_dir, 0, *LINE_ALLOC[0][1])
-        input_browse_button = QPushButton("Browse")
+        input_browse_button = QPushButton(_t("task.browse"))
         input_browse_button.clicked.connect(self.browse_input_dir)
         row_layout.addWidget(input_browse_button, 0, *LINE_ALLOC[0][2])
 
-        row_layout.addWidget(QLabel("Output Directory:"), 1, *LINE_ALLOC[1][0])
+        row_layout.addWidget(QLabel(_t("task.output_dir.name")), 1, *LINE_ALLOC[1][0])
         row_layout.addWidget(self.output_dir, 1, *LINE_ALLOC[1][1])
-        output_browse_button = QPushButton("Browse")
+        output_browse_button = QPushButton(_t("task.browse"))
         output_browse_button.clicked.connect(self.browse_output_dir)
         row_layout.addWidget(output_browse_button, 1, *LINE_ALLOC[1][2])
 
         # Track
-        row_layout.addWidget(QLabel("Tracks to Keep:"), 2, *LINE_ALLOC[2][0])
+        row_layout.addWidget(
+            QLabel(_t("FAPSeparateWidget.track")), 2, *LINE_ALLOC[2][0]
+        )
         self.track_combo = QComboBox()
         self.track_combo.addItems(["vocals", "drums", "bass", "other"])
         self.track_combo.setCurrentText("vocals")
         row_layout.addWidget(self.track_combo, 2, *LINE_ALLOC[2][1])
 
         # Model
-        row_layout.addWidget(QLabel("Model to Use:"), 2, *LINE_ALLOC[2][2])
+        row_layout.addWidget(
+            QLabel(_t("FAPSeparateWidget.model")), 2, *LINE_ALLOC[2][2]
+        )
         self.model_combo = QComboBox()
         self.model_combo.addItems(["htdemucs", "demucs", "tasnet"])
         self.model_combo.setCurrentText("htdemucs")
         row_layout.addWidget(self.model_combo, 2, *LINE_ALLOC[2][3])
 
         # Shifts
-        row_layout.addWidget(QLabel("Number of Shifts:"), 3, *LINE_ALLOC[2][0])
+        row_layout.addWidget(
+            QLabel(_t("FAPSeparateWidget.shifts")), 3, *LINE_ALLOC[2][0]
+        )
         self.shifts_spin = QSpinBox()
         self.shifts_spin.setRange(1, 10)
         self.shifts_spin.setValue(1)
         row_layout.addWidget(self.shifts_spin, 3, *LINE_ALLOC[2][1])
 
-        # threads per GPU
-        row_layout.addWidget(QLabel("Workers per GPU:"), 3, *LINE_ALLOC[2][2])
+        # Workers per GPU
+        row_layout.addWidget(
+            QLabel(_t("FAPSeparateWidget.workers_per_gpu")), 3, *LINE_ALLOC[2][2]
+        )
         self.num_workers_per_gpu_spin = QSpinBox()
         self.num_workers_per_gpu_spin.setRange(1, 8)
         self.num_workers_per_gpu_spin.setValue(2)
         row_layout.addWidget(self.num_workers_per_gpu_spin, 3, *LINE_ALLOC[2][3])
 
-        # others
-        self.recursive_check = QCheckBox("Search Recursively")
+        # Other options
+        self.recursive_check = QCheckBox(_t("FAPWidget.rc"))
         self.recursive_check.setChecked(True)
         row_layout.addWidget(self.recursive_check, 4, *LINE_ALLOC[3][0])
 
-        self.overwrite_check = QCheckBox("Overwrite Existing Files")
+        self.overwrite_check = QCheckBox(_t("FAPWidget.oc"))
         self.overwrite_check.setChecked(False)
         row_layout.addWidget(self.overwrite_check, 4, *LINE_ALLOC[3][1])
 
-        self.clean_check = QCheckBox("Clean Output Directory Before Processing")
+        self.clean_check = QCheckBox(_t("FAPWidget.cc"))
         self.clean_check.setChecked(False)
         row_layout.addWidget(self.clean_check, 4, *LINE_ALLOC[3][2])
 
-        # sepr
+        # Start and Stop buttons
         self.start_button.clicked.connect(self.call_separate)
         row_layout.addWidget(self.start_button, 5, *LINE_ALLOC[3][0])
 
@@ -459,8 +478,8 @@ class FAPSeparateWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                "Invalid Input Directory",
-                "Please select a valid input directory.",
+                _t("modules.task.input_dir.error_title"),
+                _t("modules.task.input_dir.error_msg"),
             )
             return
         if not output_dir or not Path(output_dir).is_dir():
@@ -506,88 +525,98 @@ class FAPSeparateWidget(TaskManagerMixin):
 
 class FAPSliceAudioWidget(TaskManagerMixin):
     def __init__(self, console_widget: ConsoleWidget, python: QLineEdit):
-        super().__init__(console_widget, name="Slice Audio")
+        super().__init__(console_widget, name=_t("FAPSliceAudioWidget.name"))
         layout = QVBoxLayout(self)
         self.setup_fap_slice_settings(layout)
         self.setLayout(layout)
         self.python = python
 
     def setup_fap_slice_settings(self, layout: QVBoxLayout):
-        row = QGroupBox("FAP Slice Audio Settings")
+        row = QGroupBox(_t("FAPSliceAudioWidget.title"))
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-        # Input Dir
-        row_layout.addWidget(QLabel("Input Directory:"), 0, *LINE_ALLOC[0][0])
+        # Input Directory
+        row_layout.addWidget(QLabel(_t("task.input_dir.name")), 0, *LINE_ALLOC[0][0])
         row_layout.addWidget(self.input_dir, 0, *LINE_ALLOC[0][1])
-        input_browse_button = QPushButton("Browse")
+        input_browse_button = QPushButton(_t("task.browse"))
         input_browse_button.clicked.connect(self.browse_input_dir)
         row_layout.addWidget(input_browse_button, 0, *LINE_ALLOC[0][2])
 
         # Output Directory
-        row_layout.addWidget(QLabel("Output Directory:"), 1, *LINE_ALLOC[1][0])
+        row_layout.addWidget(QLabel(_t("task.output_dir.name")), 1, *LINE_ALLOC[1][0])
         row_layout.addWidget(self.output_dir, 1, *LINE_ALLOC[1][1])
-        output_browse_button = QPushButton("Browse")
+        output_browse_button = QPushButton(_t("task.browse"))
         output_browse_button.clicked.connect(self.browse_output_dir)
         row_layout.addWidget(output_browse_button, 1, *LINE_ALLOC[1][2])
 
         # Min Duration
-        row_layout.addWidget(QLabel("Min Duration (s):"), 2, *LINE_ALLOC[4][0])
+        row_layout.addWidget(
+            QLabel(_t("FAPSliceAudioWidget.min_duration")), 2, *LINE_ALLOC[4][0]
+        )
         self.min_duration_spin = QDoubleSpinBox()
         self.min_duration_spin.setRange(0.1, 100.0)
         self.min_duration_spin.setValue(0.5)
         row_layout.addWidget(self.min_duration_spin, 2, *LINE_ALLOC[4][1])
 
         # Max Duration
-        row_layout.addWidget(QLabel("Max Duration (s):"), 2, *LINE_ALLOC[4][2])
+        row_layout.addWidget(
+            QLabel(_t("FAPSliceAudioWidget.max_duration")), 2, *LINE_ALLOC[4][2]
+        )
         self.max_duration_spin = QDoubleSpinBox()
         self.max_duration_spin.setRange(1.0, 600.0)
         self.max_duration_spin.setValue(20.0)
         row_layout.addWidget(self.max_duration_spin, 2, *LINE_ALLOC[4][3])
 
         # Min Silence Duration
-        row_layout.addWidget(QLabel("Min Silence (s):"), 2, *LINE_ALLOC[4][4])
+        row_layout.addWidget(
+            QLabel(_t("FAPSliceAudioWidget.min_silence")), 2, *LINE_ALLOC[4][4]
+        )
         self.min_silence_spin = QDoubleSpinBox()
         self.min_silence_spin.setRange(0.1, 10.0)
         self.min_silence_spin.setValue(0.3)
         row_layout.addWidget(self.min_silence_spin, 2, *LINE_ALLOC[4][5])
 
         # Number of Workers
-        row_layout.addWidget(QLabel("Workers:"), 3, *LINE_ALLOC[2][0])
+        row_layout.addWidget(
+            QLabel(_t("FAPSliceAudioWidget.workers")), 3, *LINE_ALLOC[2][0]
+        )
         self.num_workers_spin = QSpinBox()
         self.num_workers_spin.setRange(1, 64)
         self.num_workers_spin.setValue(1)
         row_layout.addWidget(self.num_workers_spin, 3, *LINE_ALLOC[2][1])
 
         # Speech Pad Duration
-        row_layout.addWidget(QLabel("Speech Pad (s):"), 3, *LINE_ALLOC[2][2])
+        row_layout.addWidget(
+            QLabel(_t("FAPSliceAudioWidget.speech_pad")), 3, *LINE_ALLOC[2][2]
+        )
         self.speech_pad_spin = QDoubleSpinBox()
         self.speech_pad_spin.setRange(0.0, 5.0)
         self.speech_pad_spin.setValue(0.1)
         row_layout.addWidget(self.speech_pad_spin, 3, *LINE_ALLOC[2][3])
 
         # Recursive Check
-        self.recursive_check = QCheckBox("Search Recursively")
+        self.recursive_check = QCheckBox(_t("FAPWidget.rc"))
         self.recursive_check.setChecked(True)
         row_layout.addWidget(self.recursive_check, 4, *LINE_ALLOC[3][0])
 
         # Overwrite Check
-        self.overwrite_check = QCheckBox("Overwrite Existing Files")
+        self.overwrite_check = QCheckBox(_t("FAPWidget.oc"))
         self.overwrite_check.setChecked(False)
         row_layout.addWidget(self.overwrite_check, 4, *LINE_ALLOC[3][1])
 
         # Clean Check
-        self.clean_check = QCheckBox("Clean Output Directory Before Processing")
+        self.clean_check = QCheckBox(_t("FAPWidget.cc"))
         self.clean_check.setChecked(False)
         row_layout.addWidget(self.clean_check, 4, *LINE_ALLOC[3][2])
 
         # Flat Layout Check
-        self.flat_layout_check = QCheckBox("Use Flat Directory Structure")
+        self.flat_layout_check = QCheckBox(_t("FAPSliceAudioWidget.flat_layout"))
         self.flat_layout_check.setChecked(False)
         row_layout.addWidget(self.flat_layout_check, 5, *LINE_ALLOC[3][0])
 
         # Merge Short Check
-        self.merge_short_check = QCheckBox("Merge Short Slices Automatically")
+        self.merge_short_check = QCheckBox(_t("FAPSliceAudioWidget.merge_short"))
         self.merge_short_check.setChecked(False)
         row_layout.addWidget(self.merge_short_check, 5, *LINE_ALLOC[3][1])
 
@@ -611,8 +640,8 @@ class FAPSliceAudioWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                "Invalid Input Directory",
-                "Please select a valid input directory.",
+                _t("modules.task.input_dir.error_title"),
+                _t("modules.task.input_dir.error_msg"),
             )
             return
         if not output_dir or not Path(output_dir).is_dir():
@@ -673,40 +702,46 @@ class FAPSliceAudioWidget(TaskManagerMixin):
 
 class FAPTranscribeWidget(TaskManagerMixin):
     def __init__(self, console_widget: ConsoleWidget, python: QLineEdit):
-        super().__init__(console_widget, name="Transcribe")
+        super().__init__(console_widget, name=_t("FAPTranscribeWidget.name"))
         layout = QVBoxLayout(self)
         self.setup_fap_transcribe_settings(layout)
         self.setLayout(layout)
         self.python = python
 
     def setup_fap_transcribe_settings(self, layout: QVBoxLayout):
-        row = QGroupBox("FAP Transcribe Settings")
+        row = QGroupBox(_t("FAPTranscribeWidget.title"))
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-        # Input Dir
-        row_layout.addWidget(QLabel("Input Directory:"), 0, 0, 1, 1)
+        # Input Directory
+        row_layout.addWidget(QLabel(_t("task.input_dir.name")), 0, 0, 1, 1)
         row_layout.addWidget(self.input_dir, 0, 1, 1, 5)
-        input_browse_button = QPushButton("Browse")
+        input_browse_button = QPushButton(_t("task.browse"))
         input_browse_button.clicked.connect(self.browse_input_dir)
         row_layout.addWidget(input_browse_button, 0, 6, 1, 2)
 
         # Number of Workers
-        row_layout.addWidget(QLabel("Number of Workers:"), 1, *LINE_ALLOC[2][0])
+        row_layout.addWidget(
+            QLabel(_t("FAPTranscribeWidget.workers")), 1, *LINE_ALLOC[2][0]
+        )
         self.num_workers_spin = QSpinBox()
         self.num_workers_spin.setRange(1, 64)
         self.num_workers_spin.setValue(2)
         row_layout.addWidget(self.num_workers_spin, 1, *LINE_ALLOC[2][1])
 
         # Language
-        row_layout.addWidget(QLabel("Language:"), 1, *LINE_ALLOC[2][2])
+        row_layout.addWidget(
+            QLabel(_t("FAPTranscribeWidget.language")), 1, *LINE_ALLOC[2][2]
+        )
         self.language_combo = QComboBox()
         self.language_combo.addItems(["zh", "en", "fr", "de", "es"])
         self.language_combo.setCurrentText("zh")
         row_layout.addWidget(self.language_combo, 1, *LINE_ALLOC[2][3])
 
         # Model Size
-        row_layout.addWidget(QLabel("Model Size:"), 2, *LINE_ALLOC[2][0])
+        row_layout.addWidget(
+            QLabel(_t("FAPTranscribeWidget.model_size")), 2, *LINE_ALLOC[2][0]
+        )
         self.model_size_combo = QComboBox()
         self.model_size_combo.addItems(
             ["small", "medium", "large", "iic/SenseVoiceSmall"]
@@ -715,28 +750,34 @@ class FAPTranscribeWidget(TaskManagerMixin):
         row_layout.addWidget(self.model_size_combo, 2, *LINE_ALLOC[2][1])
 
         # Model Type
-        row_layout.addWidget(QLabel("Model Type:"), 2, *LINE_ALLOC[2][2])
+        row_layout.addWidget(
+            QLabel(_t("FAPTranscribeWidget.model_type")), 2, *LINE_ALLOC[2][2]
+        )
         self.model_type_combo = QComboBox()
         self.model_type_combo.addItems(["whisper", "funasr"])
         self.model_type_combo.setCurrentText("funasr")
         row_layout.addWidget(self.model_type_combo, 2, *LINE_ALLOC[2][3])
 
         # Compute Type
-        row_layout.addWidget(QLabel("Compute Type:"), 3, *LINE_ALLOC[4][0])
+        row_layout.addWidget(
+            QLabel(_t("FAPTranscribeWidget.compute_type")), 3, *LINE_ALLOC[4][0]
+        )
         self.compute_type_combo = QComboBox()
         self.compute_type_combo.addItems(["float16", "float32", "int8", "int8_float16"])
         self.compute_type_combo.setCurrentText("float16")
         row_layout.addWidget(self.compute_type_combo, 3, *LINE_ALLOC[4][1])
 
         # Batch Size
-        row_layout.addWidget(QLabel("Batch Size:"), 3, *LINE_ALLOC[4][2])
+        row_layout.addWidget(
+            QLabel(_t("FAPTranscribeWidget.batch_size")), 3, *LINE_ALLOC[4][2]
+        )
         self.batch_size_spin = QSpinBox()
-        self.batch_size_spin.setRange(1, 1024)  # Arbitrary upper limit
+        self.batch_size_spin.setRange(1, 1024)
         self.batch_size_spin.setValue(1)
         row_layout.addWidget(self.batch_size_spin, 3, *LINE_ALLOC[4][3])
 
         # Recursive Check
-        self.recursive_check = QCheckBox("Search Recursively")
+        self.recursive_check = QCheckBox(_t("FAPWidget.rc"))
         self.recursive_check.setChecked(True)
         row_layout.addWidget(self.recursive_check, 3, *LINE_ALLOC[4][4])
 
@@ -759,8 +800,8 @@ class FAPTranscribeWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                "Invalid Input Directory",
-                "Please select a valid input directory.",
+                _t("modules.task.input_dir.error_title"),
+                _t("modules.task.input_dir.error_msg"),
             )
             return
 
@@ -808,60 +849,70 @@ class FAPTranscribeWidget(TaskManagerMixin):
 
 class FAPLengthStatWidget(TaskManagerMixin):
     def __init__(self, console_widget: ConsoleWidget, python: QLineEdit):
-        super().__init__(console_widget, name="Audio Length Statistics")
+        super().__init__(console_widget, name=_t("FAPLengthStatWidget.name"))
         layout = QVBoxLayout(self)
         self.setup_fap_length_settings(layout)
         self.setLayout(layout)
         self.python = python
 
     def setup_fap_length_settings(self, layout: QVBoxLayout):
-        row = QGroupBox("FAP Length Settings")
+        row = QGroupBox(_t("FAPLengthStatWidget.title"))
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         # Input Directory
-        row_layout.addWidget(QLabel("Input Directory:"), 0, *LINE_ALLOC[0][0])
-        self.input_dir = QLineEdit()
+        row_layout.addWidget(QLabel(_t("task.input_dir.name")), 0, *LINE_ALLOC[0][0])
         row_layout.addWidget(self.input_dir, 0, *LINE_ALLOC[0][1])
-        input_browse_button = QPushButton("Browse")
+        input_browse_button = QPushButton(_t("task.browse"))
         input_browse_button.clicked.connect(self.browse_input_dir)
         row_layout.addWidget(input_browse_button, 0, *LINE_ALLOC[0][2])
 
         # Recursive Search Checkbox
-        self.recursive_check = QCheckBox("Search Recursively")
+        self.recursive_check = QCheckBox(_t("FAPWidget.rc"))
         self.recursive_check.setChecked(True)
         row_layout.addWidget(self.recursive_check, 1, *LINE_ALLOC[1][0])
 
         # Visualization Option
-        self.visualize_check = QCheckBox("Visualize Distribution")
+        self.visualize_check = QCheckBox(_t("FAPLengthStatWidget.visualize"))
         self.visualize_check.setChecked(True)
         row_layout.addWidget(self.visualize_check, 1, *LINE_ALLOC[1][1])
 
         # Accurate Mode Checkbox
-        self.accurate_check = QCheckBox("Use Accurate Mode")
+        self.accurate_check = QCheckBox(_t("FAPLengthStatWidget.accurate"))
         self.accurate_check.setChecked(False)
         row_layout.addWidget(self.accurate_check, 1, *LINE_ALLOC[1][2])
 
-        row_layout.addWidget(QLabel("Long Threshold (s):"), 2, *LINE_ALLOC[4][0])
+        # Long Threshold
+        row_layout.addWidget(
+            QLabel(_t("FAPLengthStatWidget.long_threshold")), 2, *LINE_ALLOC[4][0]
+        )
         self.long_threshold_spin = QSpinBox()
-        self.long_threshold_spin.setRange(1, 3600)  # 1 hour
-        self.long_threshold_spin.setValue(300)  # 5 min
+        self.long_threshold_spin.setRange(1, 3600)
+        self.long_threshold_spin.setValue(300)
         row_layout.addWidget(self.long_threshold_spin, 2, *LINE_ALLOC[4][1])
 
-        row_layout.addWidget(QLabel("Short Threshold (s):"), 2, *LINE_ALLOC[4][2])
+        # Short Threshold
+        row_layout.addWidget(
+            QLabel(_t("FAPLengthStatWidget.short_threshold")), 2, *LINE_ALLOC[4][2]
+        )
         self.short_threshold_spin = QSpinBox()
         self.short_threshold_spin.setRange(1, 300)
         self.short_threshold_spin.setValue(30)
         row_layout.addWidget(self.short_threshold_spin, 2, *LINE_ALLOC[4][3])
 
-        row_layout.addWidget(QLabel("Number of Workers:"), 2, *LINE_ALLOC[4][4])
+        # Number of Workers
+        row_layout.addWidget(
+            QLabel(_t("FAPLengthStatWidget.workers")), 2, *LINE_ALLOC[4][4]
+        )
         self.num_workers_spin = QSpinBox()
         self.num_workers_spin.setRange(1, 64)
-        self.num_workers_spin.setValue(4)  # Default to 4 workers
+        self.num_workers_spin.setValue(4)
         row_layout.addWidget(self.num_workers_spin, 2, *LINE_ALLOC[4][5])
 
+        # Start and Stop Buttons
         self.start_button.clicked.connect(self.call_fap_length)
         row_layout.addWidget(self.start_button, 3, *LINE_ALLOC[3][0])
+
         self.stop_button.clicked.connect(self.stop_fap_length)
         row_layout.addWidget(self.stop_button, 3, *LINE_ALLOC[3][1])
         row_layout.addWidget(self.progress_bar, 3, *LINE_ALLOC[3][2])
@@ -869,18 +920,13 @@ class FAPLengthStatWidget(TaskManagerMixin):
         row.setLayout(row_layout)
         layout.addWidget(row)
 
-    def browse_input_dir(self):
-        dir_path = QFileDialog.getExistingDirectory(self, "Select Input Directory")
-        if dir_path:
-            self.input_dir.setText(dir_path)
-
     def call_fap_length(self):
         input_dir = self.input_dir.text()
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                "Invalid Input Directory",
-                "Please select a valid input directory.",
+                _t("modules.task.input_dir.error_title"),
+                _t("modules.task.input_dir.error_msg"),
             )
             return
 
@@ -922,62 +968,61 @@ class FAPLengthStatWidget(TaskManagerMixin):
 
 class FAPFrequencyStatWidget(TaskManagerMixin):
     def __init__(self, console_widget: ConsoleWidget, python: QLineEdit):
-        super().__init__(console_widget, name="Frequency Analysis")
+        super().__init__(console_widget, name=_t("FAPFrequencyStatWidget.name"))
         layout = QVBoxLayout(self)
         self.setup_fap_frequency_settings(layout)
         self.setLayout(layout)
         self.python = python
 
     def setup_fap_frequency_settings(self, layout: QVBoxLayout):
-        row = QGroupBox("FAP Frequency Settings")
+        row = QGroupBox(_t("FAPFrequencyStatWidget.title"))
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-        row_layout.addWidget(QLabel("Input Directory:"), 0, *LINE_ALLOC[0][0])
-        self.input_dir = QLineEdit()
+        # Input Directory
+        row_layout.addWidget(QLabel(_t("task.input_dir.name")), 0, *LINE_ALLOC[0][0])
         row_layout.addWidget(self.input_dir, 0, *LINE_ALLOC[0][1])
-        input_browse_button = QPushButton("Browse")
+        input_browse_button = QPushButton(_t("task.browse"))
         input_browse_button.clicked.connect(self.browse_input_dir)
         row_layout.addWidget(input_browse_button, 0, *LINE_ALLOC[0][2])
 
-        self.recursive_check = QCheckBox("Search Recursively")
+        # Recursive Search Checkbox
+        self.recursive_check = QCheckBox(_t("FAPWidget.rc"))
         self.recursive_check.setChecked(True)
         row_layout.addWidget(self.recursive_check, 1, *LINE_ALLOC[1][0])
 
         # Visualization Option
-        self.visualize_check = QCheckBox("Visualize Distribution")
+        self.visualize_check = QCheckBox(_t("FAPFrequencyStatWidget.visualize"))
         self.visualize_check.setChecked(True)
         row_layout.addWidget(self.visualize_check, 1, *LINE_ALLOC[1][1])
 
-        row_layout.addWidget(QLabel("Number of Workers:"), 2, *LINE_ALLOC[2][0])
+        # Number of Workers
+        row_layout.addWidget(
+            QLabel(_t("FAPFrequencyStatWidget.workers")), 2, *LINE_ALLOC[2][0]
+        )
         self.num_workers_spin = QSpinBox()
         self.num_workers_spin.setRange(1, 64)
-        self.num_workers_spin.setValue(4)  # Default to 4 workers
+        self.num_workers_spin.setValue(4)
         row_layout.addWidget(self.num_workers_spin, 2, *LINE_ALLOC[2][1])
 
+        # Start and Stop Buttons
         self.start_button.clicked.connect(self.call_fap_frequency)
         row_layout.addWidget(self.start_button, 3, *LINE_ALLOC[3][0])
 
         self.stop_button.clicked.connect(self.stop_fap_frequency)
         row_layout.addWidget(self.stop_button, 3, *LINE_ALLOC[3][1])
-
         row_layout.addWidget(self.progress_bar, 3, *LINE_ALLOC[3][2])
 
         row.setLayout(row_layout)
         layout.addWidget(row)
-
-    def browse_input_dir(self):
-        dir_path = QFileDialog.getExistingDirectory(self, "Select Input Directory")
-        if dir_path:
-            self.input_dir.setText(dir_path)
 
     def call_fap_frequency(self):
         input_dir = self.input_dir.text()
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                "Invalid Input Directory",
-                "Please select a valid input directory.",
+                _t("modules.task.input_dir.error_title"),
+                _t("modules.task.input_dir.error_msg"),
             )
             return
 
@@ -1011,51 +1056,59 @@ class FAPFrequencyStatWidget(TaskManagerMixin):
 
 class FAPMergeLabWidget(TaskManagerMixin):
     def __init__(self, console_widget: ConsoleWidget, python: QLineEdit):
-        super().__init__(console_widget, name="Merge Lab Files")
+        super().__init__(console_widget, name=_t("FAPMergeLabWidget.name"))
         layout = QVBoxLayout(self)
         self.setup_fap_merge_settings(layout)
         self.setLayout(layout)
         self.python = python
 
     def setup_fap_merge_settings(self, layout: QVBoxLayout):
-        row = QGroupBox("FAP Merge Lab Settings")
+        row = QGroupBox(_t("FAPMergeLabWidget.title"))
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-        row_layout.addWidget(QLabel("Input Directory:"), 0, *LINE_ALLOC[0][0])
+        # Input Directory
+        row_layout.addWidget(QLabel(_t("task.input_dir.name")), 0, *LINE_ALLOC[0][0])
         row_layout.addWidget(self.input_dir, 0, *LINE_ALLOC[0][1])
-        input_browse_button = QPushButton("Browse")
+        input_browse_button = QPushButton(_t("task.browse"))
         input_browse_button.clicked.connect(self.browse_input_dir)
         row_layout.addWidget(input_browse_button, 0, *LINE_ALLOC[0][2])
 
-        row_layout.addWidget(QLabel("Output FilePath:"), 1, *LINE_ALLOC[1][0])
-        self.output_dir.setPlaceholderText(f"{self.name}: Select a filepath")
+        # Output FilePath
+        row_layout.addWidget(
+            QLabel(_t("FAPMergeLabWidget.output_filepath")), 1, *LINE_ALLOC[1][0]
+        )
+        self.output_dir.setPlaceholderText(
+            _t("FAPMergeLabWidget.output_placeholder").format(name=self.name)
+        )
         row_layout.addWidget(self.output_dir, 1, *LINE_ALLOC[1][1])
-        output_browse_button = QPushButton("Browse")
+        output_browse_button = QPushButton(_t("task.browse"))
         output_browse_button.clicked.connect(self.browse_output_dir)
         row_layout.addWidget(output_browse_button, 1, *LINE_ALLOC[1][2])
 
-        row_layout.addWidget(QLabel("Template:"), 2, *LINE_ALLOC[2][0])
+        # Template
+        row_layout.addWidget(
+            QLabel(_t("FAPMergeLabWidget.template")), 2, *LINE_ALLOC[2][0]
+        )
         self.template = QLineEdit()
         self.template.setText("{PATH}|speaker|EN|{TEXT}")
         row_layout.addWidget(self.template, 2, *LINE_ALLOC[2][1])
-        self.recursive_check = QCheckBox("Search Recursively")
+
+        # Recursive Check
+        self.recursive_check = QCheckBox(_t("FAPWidget.rc"))
         self.recursive_check.setChecked(True)
         row_layout.addWidget(self.recursive_check, 2, *LINE_ALLOC[2][2])
 
+        # Start and Stop Buttons
         self.start_button.clicked.connect(self.call_merge_lab)
         row_layout.addWidget(self.start_button, 3, *LINE_ALLOC[3][0])
+
         self.stop_button.clicked.connect(self.stop_merge_lab)
         row_layout.addWidget(self.stop_button, 3, *LINE_ALLOC[3][1])
         row_layout.addWidget(self.progress_bar, 3, *LINE_ALLOC[3][2])
 
         row.setLayout(row_layout)
         layout.addWidget(row)
-
-    def browse_input_dir(self):
-        directory = QFileDialog.getExistingDirectory(self, "Select Input Directory")
-        if directory:
-            self.input_dir.setText(directory)
 
     def call_merge_lab(self):
         input_dir = self.input_dir.text()
@@ -1065,8 +1118,8 @@ class FAPMergeLabWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                "Invalid Input Directory",
-                "Please select a valid input directory.",
+                _t("modules.task.input_dir.error_title"),
+                _t("modules.task.input_dir.error_msg"),
             )
             return
 

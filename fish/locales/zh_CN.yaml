@@ -10,6 +10,10 @@ theme:
 tab:
   page1: "基本设置"
   page2: "文本转语音"
+  page3: "工具栏 1"
+  page4: "工具栏 2"
+  page5: "工具栏 3"
+  page6: "控制台"
 
 text_editor:
   input_help: "按下ctrl+m键呼出快捷插入情绪工具"
@@ -28,6 +32,11 @@ i18n:
 
 backend:
   title: "后端设置"
+  python_path: "Python解释器路径"
+  python_info: "例如 D:\\miniconda3\\envs\\fish\\python.exe"
+  python_tooltip: "默认使用系统自带python解释器"
+  select_py: "配置"
+  test_py: "测试Python"
   api_key: "API 密钥"
   api_info: "仅需于在线服务时使用"
   name: "后端"
@@ -118,3 +127,114 @@ plugins:
     index_ratio:
       label: "索引比例"
       tooltip: "TODO: 补充信息"
+
+console:
+  empty: "清空控制台"
+
+task:
+  browse: "浏览"
+  input_dir:
+    name: "输入文件夹路径:"
+    error_title: "输入的文件夹路径无效"
+    error_msg: "请选择有效的文件夹路径"
+    placeholder: "{name}: 选择输入文件夹"
+  output_dir:
+    name: "输出文件夹路径:"
+    placeholder: "{name}: 选择输出文件夹"
+  start_btn: "开始{name}"
+  stop_btn: "停止{name}"
+  running:
+    name: "任务运行中"
+    info: "一个{name}任务正在运行..."
+  stop:
+    name: "任务已中止"
+    info: "没有正在运行的{name}任务需要中止。"
+  complete:
+    name: "任务{name}已完成"
+
+worker:
+  f_signal:
+    complete: "命令 {cmd} 完成，退出代码为 {exit_code}。"
+    error: "发生异常：{e}"
+    stop: "进程已停止。"
+
+FAPWidget:
+  rc: "递归搜索"
+  oc: "覆盖现有文件"
+  cc: "处理前清空输出目录"
+
+FAPToWavWidget:
+  name: "转换为 WAV"
+  title: "FAP 到 WAV 设置"
+  max_length: "最大长度 (秒)："
+
+FAPResampleWidget:
+  name: "重新采样"
+  title: "FAP 重新采样设置"
+  sampling_rate: "采样率 (Hz)："
+  num_workers: "工作线程数量："
+
+FAPLoudNormWidget:
+  name: "响度归一化"
+  title: "FAP 响度归一化设置"
+  peak: "峰值 (dB)："
+  peak_tooltip: "设置峰值归一化水平 (dB)。"
+  loudness: "响度 (LUFS)："
+  loudness_tooltip: "设置响度归一化水平 (LUFS)。"
+  block_size: "块大小 (秒)："
+  block_size_tooltip: "设置处理块大小 (秒)。"
+  workers: "工作线程数量："
+  workers_tooltip: "设置并行处理的工作线程数量。"
+  start_tooltip: "开始响度归一化。"
+  stop_tooltip: "停止响度归一化。"
+
+FAPSeparateWidget:
+  name: "分离"
+  title: "FAP 分离设置"
+  track: "要保留的音轨："
+  model: "使用的模型："
+  shifts: "移位数量："
+  workers_per_gpu: "每个 GPU 的工作线程数量："
+
+FAPSliceAudioWidget:
+  name: "切片音频"
+  title: "FAP 音频切片设置"
+  min_duration: "最小持续时间 (秒)："
+  max_duration: "最大持续时间 (秒)："
+  min_silence: "最小静音持续时间 (秒)："
+  workers: "工作线程数量："
+  speech_pad: "语音填充 (秒)："
+  flat_layout: "使用平面目录结构"
+  merge_short: "自动合并短切片"
+
+FAPTranscribeWidget:
+  name: "转录"
+  title: "FAP 转录设置"
+  workers: "工作线程数量："
+  language: "语言："
+  model_size: "模型大小："
+  model_type: "模型类型："
+  compute_type: "计算类型："
+  batch_size: "批次大小："
+
+FAPLengthStatWidget:
+  name: "音频长度统计"
+  title: "FAP 长度设置"
+  visualize: "可视化分布"
+  accurate: "使用准确模式"
+  long_threshold: "长音频阈值 (秒)："
+  short_threshold: "短音频阈值 (秒)："
+  workers: "工作线程数量："
+
+FAPFrequencyStatWidget:
+  name: "频率分析"
+  title: "FAP 频率设置"
+  visualize: "可视化分布"
+  workers: "工作线程数量："
+
+FAPMergeLabWidget:
+  name: "合并 Lab 文件"
+  title: "FAP 合并 Lab 设置"
+  output_filepath: "输出文件路径："
+  output_placeholder: "{name}: 选择一个文件路径"
+  template: "模板："
