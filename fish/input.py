@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 )
 
 from fish.config import config
-from fish.i18n import _t
+from fish.utils.i18n import _t
 
 # Add more emotions with corresponding emojis and lighter background colors
 emotions = {

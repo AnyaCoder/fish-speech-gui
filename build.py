@@ -23,6 +23,7 @@ args = [
     f"fish/assets{sep}assets",
     "--add-data",
     f"fish/locales{sep}locales",
+    "--noconsole",
 ]
 
 sp.check_call(args)

@@ -1,5 +1,7 @@
 # fish-speech-gui
 
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/AnyaCoder/fish-speech-gui/main.svg)](https://results.pre-commit.ci/latest/github/AnyaCoder/fish-speech-gui/main)
+
 ## Basic Setup
 
 <img src="fish/assets/example_1_basic.png" width="800" />

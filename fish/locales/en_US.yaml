@@ -10,6 +10,10 @@ theme:
 tab:
   page1: "Basic Setup"
   page2: "Text to Speech"
+  page3: "Toolkit 1"
+  page4: "Toolkit 2"
+  page5: "Toolkit 3"
+  page6: "Console"
 
 text_editor:
   input_help: "Press ctrl+m to call out the Quick Insert Emotion tool"
@@ -28,10 +32,15 @@ i18n:
 
 backend:
   title: "Backend Settings"
+  python_path: "Python interpreter"
+  python_info: "e.g. D:\\miniconda3\\envs\\fish\\python.exe"
+  python_tooltip: "Default: built-in python interpreter"
+  select_py: "Configure"
+  test_py: "Test Python"
   api_key: "API KEY"
   api_info: "Only used in Online API"
   name: "Backend"
-  test: "Test"
+  test_url: "Test URL"
   test_succeed: "Successfully connected to backend."
   test_failed: "Failed to connect to backend in 5s."
 
@@ -73,6 +82,7 @@ tts_output:
 
 action:
   audio: "Now playing: {audio_name}"
+  toggle_console: "Open/Close Console"
   start: "Start Text To Speech"
   stop: "Stop Text To Speech"
   latency: "Latency: {latency:.2f} ms"

@@ -1,20 +1,15 @@
-import io
-import os
-
-os.environ["no_proxy"] = "localhost, 127.0.0.1, 0.0.0.0"
 import datetime
+import os
+import subprocess
 import sys
 
-import httpx
-import ormsgpack
 import pkg_resources
 import qdarktheme
 import requests
-from PyQt6.QtCore import QMutex, Qt, QThread, QUrl, QWaitCondition, pyqtSignal
+from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QIcon
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
-    QApplication,
     QComboBox,
     QFileDialog,
     QGridLayout,
@@ -23,6 +18,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QMainWindow,
     QMessageBox,
     QPushButton,
     QSlider,
@@ -31,42 +27,80 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from fish.audio import ServeReferenceAudio, ServeTTSRequest, get_devices
 from fish.config import application_path, config, load_config, save_config
-from fish.file import *
-from fish.i18n import _t, language_map
+from fish.fap import (
+    FAPFrequencyStatWidget,
+    FAPLengthStatWidget,
+    FAPLoudNormWidget,
+    FAPMergeLabWidget,
+    FAPResampleWidget,
+    FAPSeparateWidget,
+    FAPSliceAudioWidget,
+    FAPToWavWidget,
+    FAPTranscribeWidget,
+)
 from fish.input import TextEditorWidget
+from fish.modules.console import ConsoleStream, ConsoleWidget
+from fish.modules.globals import STOP_BUTTON_QSS
+from fish.modules.worker import TTSWorker
+from fish.utils.audio import get_devices
+from fish.utils.file import *
+from fish.utils.i18n import _t, language_map
 
 
-class MainWindow(QWidget):
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         self.setWindowIcon(QIcon(str(application_path / "assets" / "icon.png")))
-
+        self.setGeometry(100, 100, 800, 600)
         version = pkg_resources.get_distribution("fish-speech-gui").version
         # remove +editable if it exists
         version = version.split("+")[0]
         self.setWindowTitle(_t("title").format(version=version))
 
-        self.main_layout = QVBoxLayout()
-        self.tab_widget = QTabWidget()
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
 
+        # Console
+        self.console_widget = ConsoleWidget(max_lines=1000)
+        self.python = QLineEdit()
+        self.tab_widget = QTabWidget()
         self.tab_widget.addTab(self.create_settings_tab1(), _t("tab.page1"))
         self.tab_widget.addTab(self.create_settings_tab2(), _t("tab.page2"))
+        self.tab_widget.addTab(self.create_settings_tab3(), _t("tab.page3"))
+        self.tab_widget.addTab(self.create_settings_tab4(), _t("tab.page4"))
+        self.tab_widget.addTab(self.create_settings_tab5(), _t("tab.page5"))
+        self.tab_widget.addTab(self.create_settings_tab6(), _t("tab.page6"))
 
         # Stick to the top
+        self.main_layout = QVBoxLayout(central_widget)
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.main_layout.addWidget(self.tab_widget)
         self.setup_action_buttons(self.main_layout)
 
-        self.setLayout(self.main_layout)
+        # self.setLayout(self.main_layout)
 
         # Use size hint to set a reasonable size
-        self.setMinimumWidth(900)
-        self.center()
+        self.setMinimumWidth(800)
 
+        # Redefined Stream
+        self.stdout_stream = ConsoleStream()
+        self.stderr_stream = ConsoleStream()
+        self.stdout_stream.new_message.connect(
+            lambda msg: self.update_console(msg, "white")
+        )
+        self.stderr_stream.new_message.connect(
+            lambda msg: self.update_console(msg, "red")
+        )
+        sys.stdout = self.stdout_stream
+        sys.stderr = self.stderr_stream
+
+        # Uploaded ref files
         self.files = []
+
+    def update_console(self, msg, color):
+        self.console_widget.update_console(msg, color)
 
     def create_settings_tab1(self):
         tab1 = QWidget()
@@ -91,13 +125,60 @@ class MainWindow(QWidget):
         tab2.setLayout(layout2)
         return tab2
 
-    def center(self):
-        screen = QApplication.primaryScreen()
-        screen_geometry = screen.availableGeometry()
-        window_geometry = self.frameGeometry()
-        x = (screen_geometry.width() - window_geometry.width()) // 4
-        y = (screen_geometry.height() - window_geometry.height()) // 4
-        self.move(x, y)
+    def create_settings_tab3(self):
+        tab3 = QWidget()
+        layout3 = QVBoxLayout()
+        self.fap_towav_widget = FAPToWavWidget(self.console_widget, self.python)
+        self.fap_resample_widget = FAPResampleWidget(self.console_widget, self.python)
+        self.fap_loudnorm_widget = FAPLoudNormWidget(self.console_widget, self.python)
+
+        layout3.addWidget(self.fap_towav_widget)
+        layout3.addWidget(self.fap_resample_widget)
+        layout3.addWidget(self.fap_loudnorm_widget)
+
+        tab3.setLayout(layout3)
+        return tab3
+
+    def create_settings_tab4(self):
+        tab4 = QWidget()
+        layout4 = QVBoxLayout()
+        self.fap_separate_widget = FAPSeparateWidget(self.console_widget, self.python)
+        self.fap_sliceaudio_widget = FAPSliceAudioWidget(
+            self.console_widget, self.python
+        )
+        self.fap_transcribe_widget = FAPTranscribeWidget(
+            self.console_widget, self.python
+        )
+        layout4.addWidget(self.fap_separate_widget)
+        layout4.addWidget(self.fap_sliceaudio_widget)
+        layout4.addWidget(self.fap_transcribe_widget)
+        tab4.setLayout(layout4)
+        return tab4
+
+    def create_settings_tab5(self):
+        tab5 = QWidget()
+        layout5 = QVBoxLayout()
+        self.fap_frequency_widget = FAPFrequencyStatWidget(
+            self.console_widget, self.python
+        )
+        self.fap_lengstat_widget = FAPLengthStatWidget(self.console_widget, self.python)
+        self.fap_mergelab_widget = FAPMergeLabWidget(self.console_widget, self.python)
+        layout5.addWidget(self.fap_frequency_widget)
+        layout5.addWidget(self.fap_lengstat_widget)
+        layout5.addWidget(self.fap_mergelab_widget)
+        tab5.setLayout(layout5)
+        return tab5
+
+    def create_settings_tab6(self):
+        tab6 = QWidget()
+        layout6 = QVBoxLayout()
+        self.clear_button = QPushButton("Empty Console")
+        self.clear_button.clicked.connect(self.console_widget.clear_console)
+        layout6 = QVBoxLayout()
+        layout6.addWidget(self.clear_button)
+        layout6.addWidget(self.console_widget)
+        tab6.setLayout(layout6)
+        return tab6
 
     def setup_ui_settings(self, layout: QVBoxLayout):
         # we have language and backend settings in the first row
@@ -425,28 +506,42 @@ class MainWindow(QWidget):
     def setup_backend_settings(self, layout: QVBoxLayout):
         widget = QGroupBox()
         widget.setTitle(_t("backend.title"))
-        row = QHBoxLayout()
+        row = QGridLayout()
 
-        # api
-        row.addWidget(QLabel(_t("backend.api_key")))
+        row.addWidget(QLabel(_t("backend.python_path")), 0, 0)
+
+        self.python.setMinimumWidth(75)
+        self.python.setPlaceholderText(_t("backend.python_info"))
+        self.python.setToolTip(_t("backend.python_tooltip"))
+        self.python.setText("python")
+        row.addWidget(self.python, 0, 1)
+
+        self.select_py_button = QPushButton(_t("backend.select_py"))
+        self.select_py_button.clicked.connect(self.select_python)
+        row.addWidget(self.select_py_button, 0, 2)
+
+        row.addWidget(QLabel(_t("backend.api_key")), 1, 0)
         self.api_key = QLineEdit()
         self.api_key.setMinimumWidth(75)
         self.api_key.setPlaceholderText(_t("backend.api_info"))
         self.api_key.setText("YOUR_API_KEY")
-        row.addWidget(self.api_key)
+        row.addWidget(self.api_key, 1, 1)
 
-        # set up backend (url) input, and a test button
-        row.addWidget(QLabel(_t("backend.name")))
+        self.test_py_button = QPushButton(_t("backend.test_py"))
+        self.test_py_button.clicked.connect(self.test_python)
+        row.addWidget(self.test_py_button, 1, 2)
+
+        row.addWidget(QLabel(_t("backend.name")), 2, 0)
         self.backend_input = QLineEdit()
         self.backend_input.setText(config.backend)
-        row.addWidget(self.backend_input)
+        row.addWidget(self.backend_input, 2, 1)
 
-        self.test_button = QPushButton(_t("backend.test"))
-        self.test_button.clicked.connect(self.test_backend)
-        row.addWidget(self.test_button)
+        self.test_url_button = QPushButton(_t("backend.test_url"))
+        self.test_url_button.clicked.connect(self.test_backend)
+        row.addWidget(self.test_url_button, 2, 2)
 
         widget.setLayout(row)
-        widget.setMaximumHeight(100)
+        widget.setMaximumHeight(150)
         layout.addWidget(widget)
 
     def setup_action_buttons(self, layout: QVBoxLayout):
@@ -463,6 +558,7 @@ class MainWindow(QWidget):
         self.stop_button = QPushButton(_t("action.stop"))
         self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(self.stop_conversion)
+        self.stop_button.setStyleSheet(STOP_BUTTON_QSS)
         row_layout.addWidget(self.stop_button)
 
         self.latency_label = QLabel(_t("action.latency").format(latency=0))
@@ -518,6 +614,49 @@ class MainWindow(QWidget):
         self.files = []
         self.file_list_widget.clear()
         QMessageBox.warning(self, "Caution", "Successfully Removed References.")
+
+    def select_python(self):
+        file, _ = QFileDialog.getOpenFileName(
+            self, "Select Files", "", "Python interpreter (python*.*)"
+        )
+        if file:
+            self.python.setText(file)
+            QMessageBox.information(self, "OK", f"Selected a Python interpreter.")
+        else:
+            self.python.setText("python")
+            QMessageBox.warning(
+                self, "No Python Selected", "Fallback: built-in python interpreter."
+            )
+
+    def test_python(self):
+        message_box = QMessageBox()
+
+        try:
+            command = [
+                self.python.text(),
+                "-c",
+                (
+                    "import torch; "
+                    "print(f'Python Version: {torch.__version__}'); "
+                    "print(f'CUDA Available: {torch.cuda.is_available()}'); "
+                    "print(f'Device Count: {torch.cuda.device_count()}')"
+                ),
+            ]
+            result = subprocess.run(command, capture_output=True, text=True)
+
+            if result.returncode == 0:
+                output = result.stdout.strip()
+                message_box.setIcon(QMessageBox.Icon.Information)
+                message_box.setText(f"Python & CUDA Test Result:\n{output}")
+            else:
+                message_box.setIcon(QMessageBox.Icon.Warning)
+                message_box.setText(f"Error in subprocess:\n{result.stderr}")
+
+        except Exception as e:
+            message_box.setIcon(QMessageBox.Icon.Warning)
+            message_box.setText(f"Exception occurred:\n{str(e)}")
+
+        message_box.exec()
 
     def test_backend(self):
         backend = self.backend_input.text()
@@ -668,7 +807,7 @@ class MainWindow(QWidget):
         now = datetime.datetime.now()
         text = self.text_editor.input_edit.toPlainText()
 
-        audio_name = now.strftime("%Y%m%d_%H%M%S") + "_" + text[:5]
+        audio_name = now.strftime("%Y%m%d_%H%M%S")
         audio_path = Path(self.save_audio_path.text()) / f"{audio_name}.mp3"
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         self.audio_path = str(audio_path)
@@ -703,87 +842,3 @@ class MainWindow(QWidget):
     def on_conversion_finished(self):
         self.stop_conversion()
         self.set_audio(self.audio_path)
-
-
-class TTSWorker(QThread):
-    finished = pyqtSignal()
-
-    def __init__(
-        self,
-        ref_files: list[str],
-        ref_id: str,
-        backend: str,
-        text: str,
-        api_key: str,
-        audio_path: str,
-        **kwargs,
-    ):
-        super().__init__()
-        self.mutex = QMutex()
-        self.wait_condition = QWaitCondition()
-        self._stop_requested = False
-        self.ref_files = ref_files
-        self.ref_id = ref_id if len(ref_id) > 0 else None
-        self.backend = backend
-        self.text = text
-        self.api_key = api_key
-        self.audio_path = audio_path
-        self.kwargs = kwargs
-
-    def run(self):
-        pre_files = [f for f in self.ref_files if not f.endswith(".lab")]
-        audio_files = [
-            f
-            for f in pre_files
-            if Path(f).exists() and Path(f).with_suffix(".lab").exists()
-        ]
-
-        request = ServeTTSRequest(
-            text=self.text,
-            references=[
-                ServeReferenceAudio(
-                    audio=Path(f).read_bytes(),
-                    text=Path(f).with_suffix(".lab").read_text(encoding="utf-8"),
-                )
-                for f in audio_files
-            ],
-            reference_id=self.ref_id,
-            streaming=False,
-            format="mp3",
-            chunk_length=self.kwargs["chunk_length"],
-            top_p=self.kwargs["top_p"],
-            repetition_penalty=self.kwargs["repetition_penalty"],
-            max_new_tokens=self.kwargs["max_new_tokens"],
-            temperature=self.kwargs["temperature"],
-            mp3_bitrate=self.kwargs["mp3_bitrate"],
-        )
-
-        with httpx.Client() as client, open(f"{self.audio_path}", "wb") as f:
-            with client.stream(
-                "POST",
-                self.backend,
-                content=ormsgpack.packb(
-                    request, option=ormsgpack.OPT_SERIALIZE_PYDANTIC
-                ),
-                headers={
-                    "authorization": f"Bearer {self.api_key}",
-                    "content-type": "application/msgpack",
-                },
-                timeout=None,
-            ) as response:
-                for chunk in response.iter_bytes():
-                    self.mutex.lock()
-                    if self._stop_requested:
-                        print("TTS is interrupted!")
-                        self.mutex.unlock()
-                        break
-                    self.mutex.unlock()
-                    f.write(chunk)
-
-        self.finished.emit()
-
-    def stop(self):
-        self.mutex.lock()
-        self._stop_requested = True
-        self.mutex.unlock()
-        self.wait_condition.wakeAll()
