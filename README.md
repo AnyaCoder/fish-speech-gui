@@ -1,6 +1,6 @@
 # fish-speech-gui
 
-[![linux_macos_packages](https://github.com/AnyaCoder/fish-speech-gui/blob/main/.github/workflows/ci.yml/badge.svg)](https://github.com/AnyaCoder/fish-speech-gui/blob/main/.github/workflows/ci.yml)
+[linux_macos_packages](https://img.shields.io/github/actions/workflow/status/AnyaCoder/fish-speech-gui/ci.yml?label=linux-macos-build)
 
 ## Basic Setup
 
