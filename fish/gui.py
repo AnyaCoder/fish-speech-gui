@@ -7,7 +7,7 @@ import pkg_resources
 import qdarktheme
 import requests
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -42,6 +42,7 @@ from fish.fap import (
 from fish.input import TextEditorWidget
 from fish.modules.console import ConsoleStream, ConsoleWidget
 from fish.modules.globals import STOP_BUTTON_QSS
+from fish.modules.registry import widget_registry
 from fish.modules.worker import TTSWorker
 from fish.utils.audio import get_devices
 from fish.utils.file import *
@@ -61,11 +62,33 @@ class MainWindow(QMainWindow):
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
+        widget_registry.register(central_widget, "central_widget")
+        self.setup_background_image(central_widget)
 
         # Console
         self.console_widget = ConsoleWidget(max_lines=1000)
         self.python = QLineEdit()
+
+        self.main_layout = QVBoxLayout(central_widget)
+
         self.tab_widget = QTabWidget()
+        widget_registry.register(self.tab_widget, "tab_widget")
+        self.main_layout.addWidget(self.tab_widget)
+
+        self.tab_widget.setStyleSheet(
+            """                      
+            QTabWidget {
+                background: transparent;
+                border: 2px solid #0FA891D2;
+                border-radius: 10px;
+            }
+            QTabWidget > QStackedWidget {
+                background-color: rgba(255, 255, 255, 0.5);
+                border: 1px solid #FCAAAA8F;
+                border-radius: 10px;
+            }
+        """
+        )
         self.tab_widget.addTab(self.create_settings_tab1(), _t("tab.page1"))
         self.tab_widget.addTab(self.create_settings_tab2(), _t("tab.page2"))
         self.tab_widget.addTab(self.create_settings_tab3(), _t("tab.page3"))
@@ -74,12 +97,11 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(self.create_settings_tab6(), _t("tab.page6"))
 
         # Stick to the top
-        self.main_layout = QVBoxLayout(central_widget)
+
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.main_layout.addWidget(self.tab_widget)
         self.setup_action_buttons(self.main_layout)
 
-        # self.setLayout(self.main_layout)
+        self.change_theme(self.theme_combo.currentIndex())  # initialize theme for 1st
 
         # Use size hint to set a reasonable size
         self.setMinimumWidth(800)
@@ -99,12 +121,65 @@ class MainWindow(QMainWindow):
         # Uploaded ref files
         self.files = []
 
+    def set_widget_background(
+        self,
+        widget: QWidget,
+        *,
+        alpha: int = 100,
+        r: int = 255,
+        g: int = 255,
+        b: int = 255,
+        border_radius: int = 10,
+        pane_extra: str = "",
+        widget_extra: str = "",
+    ):
+        widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
+        widget.setStyleSheet(
+            f"""
+            QTabWidget::pane {{
+                background-color: rgba({r}, {g}, {b}, {alpha});
+                {pane_extra}
+                border-radius: {border_radius}px;
+            }}
+            QFrame, QWidget#{widget.objectName()} {{
+                background-color: rgba({r}, {g}, {b}, {alpha});
+                {widget_extra}
+                border-radius: {border_radius}px;
+            }}
+        """
+        )
+
+    def setup_background_image(self, widget: QWidget):
+        background_path = str(application_path / "assets" / "bg.png")
+
+        background_label = QLabel(widget)
+        background_pixmap = QPixmap(background_path)
+
+        if background_pixmap.isNull():
+            print("Failed to load background image")
+            return
+
+        background_label.setPixmap(background_pixmap)
+        background_label.setScaledContents(True)
+        background_label.resize(widget.size())
+        background_label.lower()
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+        widget.installEventFilter(self)
+        self.background_label = background_label
+
+    def eventFilter(self, source, event):
+        if event.type() == event.Type.Resize and source == self.centralWidget():
+            self.background_label.resize(source.size())
+        return super().eventFilter(source, event)
+
     def update_console(self, msg, color):
         self.console_widget.update_console(msg, color)
 
     def create_settings_tab1(self):
         tab1 = QWidget()
         layout1 = QVBoxLayout()
+        widget_registry.register(tab1, "tab1")
 
         self.setup_ui_settings(layout1)
         self.setup_backend_settings(layout1)
@@ -118,7 +193,7 @@ class MainWindow(QMainWindow):
     def create_settings_tab2(self):
         tab2 = QWidget()
         layout2 = QVBoxLayout()
-
+        widget_registry.register(tab2, "tab2")
         self.setup_textinput_settings(layout2)
         self.setup_audioplayer_settings(layout2)
 
@@ -128,6 +203,7 @@ class MainWindow(QMainWindow):
     def create_settings_tab3(self):
         tab3 = QWidget()
         layout3 = QVBoxLayout()
+        widget_registry.register(tab3, "tab3")
         self.fap_towav_widget = FAPToWavWidget(self.console_widget, self.python)
         self.fap_resample_widget = FAPResampleWidget(self.console_widget, self.python)
         self.fap_loudnorm_widget = FAPLoudNormWidget(self.console_widget, self.python)
@@ -142,6 +218,7 @@ class MainWindow(QMainWindow):
     def create_settings_tab4(self):
         tab4 = QWidget()
         layout4 = QVBoxLayout()
+        widget_registry.register(tab4, "tab4")
         self.fap_separate_widget = FAPSeparateWidget(self.console_widget, self.python)
         self.fap_sliceaudio_widget = FAPSliceAudioWidget(
             self.console_widget, self.python
@@ -158,6 +235,7 @@ class MainWindow(QMainWindow):
     def create_settings_tab5(self):
         tab5 = QWidget()
         layout5 = QVBoxLayout()
+        widget_registry.register(tab5, "tab5")
         self.fap_frequency_widget = FAPFrequencyStatWidget(
             self.console_widget, self.python
         )
@@ -172,6 +250,7 @@ class MainWindow(QMainWindow):
     def create_settings_tab6(self):
         tab6 = QWidget()
         layout6 = QVBoxLayout()
+        widget_registry.register(tab6, "tab6")
         self.clear_button = QPushButton(_t("console.empty"))
         self.clear_button.clicked.connect(self.console_widget.clear_console)
         layout6 = QVBoxLayout()
@@ -186,11 +265,13 @@ class MainWindow(QMainWindow):
         row.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         # set up a theme combo box
-        row.addWidget(QLabel(_t("theme.name")))
+        theme_label = QLabel(_t("theme.name"))
+        row.addWidget(theme_label)
         self.theme_combo = QComboBox()
         self.theme_combo.addItem(_t("theme.auto"), "auto")
         self.theme_combo.addItem(_t("theme.light"), "light")
         self.theme_combo.addItem(_t("theme.dark"), "dark")
+
         self.theme_combo.setCurrentText(_t(f"theme.{config.theme}"))
         self.theme_combo.currentIndexChanged.connect(self.change_theme)
         self.theme_combo.setMinimumWidth(100)
@@ -223,6 +304,7 @@ class MainWindow(QMainWindow):
     def setup_device_settings(self, layout: QVBoxLayout):
         # second row: a group box for audio device settings
         row = QGroupBox(_t("audio_device.name"))
+        widget_registry.register(row, "device")
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -275,6 +357,8 @@ class MainWindow(QMainWindow):
     def setup_audio_settings(self, layout: QVBoxLayout):
         # third row: a group box for audio settings
         row = QGroupBox(_t("audio.name"))
+        widget_registry.register(row, "audio")
+
         row_layout = QGridLayout()
 
         # db_threshold, pitch_shift
@@ -378,6 +462,7 @@ class MainWindow(QMainWindow):
 
     def setup_reference_settings(self, layout: QVBoxLayout):
         row = QGroupBox()
+        widget_registry.register(row, "ref")
         row.setTitle(_t("reference.name"))
         row_layout = QGridLayout()
 
@@ -415,6 +500,7 @@ class MainWindow(QMainWindow):
 
     def setup_textinput_settings(self, layout: QVBoxLayout):
         row = QGroupBox()
+        widget_registry.register(row, "textinput")
         row.setTitle(_t("tts_input.name"))
 
         row_layout = QGridLayout()
@@ -425,6 +511,7 @@ class MainWindow(QMainWindow):
 
     def setup_audioplayer_settings(self, layout: QVBoxLayout):
         row = QGroupBox()
+        widget_registry.register(row, "audioplayer")
         row.setTitle(_t("tts_output.name"))
         row_layout = QGridLayout()
 
@@ -506,6 +593,7 @@ class MainWindow(QMainWindow):
     def setup_backend_settings(self, layout: QVBoxLayout):
         widget = QGroupBox()
         widget.setTitle(_t("backend.title"))
+        widget_registry.register(widget, "backend")
         row = QGridLayout()
 
         row.addWidget(QLabel(_t("backend.python_path")), 0, 0)
@@ -547,6 +635,8 @@ class MainWindow(QMainWindow):
     def setup_action_buttons(self, layout: QVBoxLayout):
         row = QWidget()
         row_layout = QHBoxLayout()
+        widget_registry.register(row, "action_widget")
+
         self.now_audio = QLabel(_t("action.audio").format(audio_name="(null)"))
         row_layout.addWidget(self.now_audio)
         row_layout.addStretch(1)
@@ -570,6 +660,24 @@ class MainWindow(QMainWindow):
 
     def change_theme(self, index):
         config.theme = self.theme_combo.itemData(index)
+        is_light = config.theme == "light"
+        if hasattr(self, "background_label"):
+            self.background_label.setVisible(is_light)
+
+        if is_light:
+            for widget in widget_registry.get_registered_widgets().values():
+                self.set_widget_background(widget)
+            widget_registry.get_registered_widgets().get("action_widget").setStyleSheet(
+                """
+                    QFrame, QWidget#action_widget { 
+                        border-radius: 10px; 
+                    }
+                """
+            )
+
+        else:
+            for widget in widget_registry.get_registered_widgets().values():
+                widget.setStyleSheet("")
 
         save_config()
         qdarktheme.setup_theme(config.theme)
@@ -841,4 +949,4 @@ class MainWindow(QMainWindow):
 
     def on_conversion_finished(self):
         self.stop_conversion()
-        self.set_audio(self.audio_path)
+        self.set_audio(self.audio_path)()

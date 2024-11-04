@@ -12,7 +12,7 @@ if getattr(sys, "frozen", False):
     # path into variable _MEIPASS'.
     application_path = Path(sys._MEIPASS)
 else:
-    application_path = Path(__file__).parent
+    application_path = Path(__file__).parent.parent
 
 
 @dataclass

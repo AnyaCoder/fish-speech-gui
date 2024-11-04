@@ -148,7 +148,10 @@ task:
     info: "一个{name}任务正在运行..."
   stop:
     name: "任务已中止"
-    info: "没有正在运行的{name}任务需要中止。"
+    info: "{name}已终止。"
+  none:
+    name: "无任务"
+    info: "没有正在运行的{name}任务需要停止."
   complete:
     name: "任务{name}已完成"
 

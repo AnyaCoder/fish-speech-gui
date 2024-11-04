@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 
 from fish.modules.console import ConsoleWidget
 from fish.modules.globals import FAP, LINE_ALLOC, STOP_BUTTON_QSS
+from fish.modules.registry import widget_registry
 from fish.modules.task import TaskManagerMixin
 from fish.utils.i18n import _t
 
@@ -33,6 +34,7 @@ class FAPToWavWidget(TaskManagerMixin):
 
     def setup_fap_to_wav_settings(self, layout: QVBoxLayout):
         row = QGroupBox(_t("FAPToWavWidget.title"))
+        widget_registry.register(row, "fap_to_wav")
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -85,8 +87,8 @@ class FAPToWavWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                _t("modules.task.input_dir.error_title"),
-                _t("modules.task.input_dir.error_msg"),
+                _t("task.input_dir.error_title"),
+                _t("task.input_dir.error_msg"),
             )
             return
         if not output_dir or not Path(output_dir).is_dir():
@@ -132,6 +134,7 @@ class FAPResampleWidget(TaskManagerMixin):
 
     def setup_fap_resample_settings(self, layout: QVBoxLayout):
         row = QGroupBox(_t("FAPResampleWidget.title"))
+        widget_registry.register(row, "fap_resample")
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -192,8 +195,8 @@ class FAPResampleWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                _t("modules.task.input_dir.error_title"),
-                _t("modules.task.input_dir.error_msg"),
+                _t("task.input_dir.error_title"),
+                _t("task.input_dir.error_msg"),
             )
             return
         if not output_dir or not Path(output_dir).is_dir():
@@ -243,6 +246,7 @@ class FAPLoudNormWidget(TaskManagerMixin):
 
     def setup_fap_loud_norm_settings(self, layout: QVBoxLayout):
         row = QGroupBox(_t("FAPLoudNormWidget.title"))
+        widget_registry.register(row, "fap_loud_norm")
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -338,8 +342,8 @@ class FAPLoudNormWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                _t("modules.task.input_dir.error_title"),
-                _t("modules.task.input_dir.error_msg"),
+                _t("task.input_dir.error_title"),
+                _t("task.input_dir.error_msg"),
             )
             return
         if not output_dir or not Path(output_dir).is_dir():
@@ -394,6 +398,7 @@ class FAPSeparateWidget(TaskManagerMixin):
 
     def setup_fap_separate_settings(self, layout: QVBoxLayout):
         row = QGroupBox(_t("FAPSeparateWidget.title"))
+        widget_registry.register(row, "fap_separate")
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -478,8 +483,8 @@ class FAPSeparateWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                _t("modules.task.input_dir.error_title"),
-                _t("modules.task.input_dir.error_msg"),
+                _t("task.input_dir.error_title"),
+                _t("task.input_dir.error_msg"),
             )
             return
         if not output_dir or not Path(output_dir).is_dir():
@@ -533,6 +538,7 @@ class FAPSliceAudioWidget(TaskManagerMixin):
 
     def setup_fap_slice_settings(self, layout: QVBoxLayout):
         row = QGroupBox(_t("FAPSliceAudioWidget.title"))
+        widget_registry.register(row, "fap_slice")
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -640,8 +646,8 @@ class FAPSliceAudioWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                _t("modules.task.input_dir.error_title"),
-                _t("modules.task.input_dir.error_msg"),
+                _t("task.input_dir.error_title"),
+                _t("task.input_dir.error_msg"),
             )
             return
         if not output_dir or not Path(output_dir).is_dir():
@@ -710,6 +716,7 @@ class FAPTranscribeWidget(TaskManagerMixin):
 
     def setup_fap_transcribe_settings(self, layout: QVBoxLayout):
         row = QGroupBox(_t("FAPTranscribeWidget.title"))
+        widget_registry.register(row, "fap_transcribe")
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -800,8 +807,8 @@ class FAPTranscribeWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                _t("modules.task.input_dir.error_title"),
-                _t("modules.task.input_dir.error_msg"),
+                _t("task.input_dir.error_title"),
+                _t("task.input_dir.error_msg"),
             )
             return
 
@@ -857,6 +864,7 @@ class FAPLengthStatWidget(TaskManagerMixin):
 
     def setup_fap_length_settings(self, layout: QVBoxLayout):
         row = QGroupBox(_t("FAPLengthStatWidget.title"))
+        widget_registry.register(row, "fap_length")
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -925,8 +933,8 @@ class FAPLengthStatWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                _t("modules.task.input_dir.error_title"),
-                _t("modules.task.input_dir.error_msg"),
+                _t("task.input_dir.error_title"),
+                _t("task.input_dir.error_msg"),
             )
             return
 
@@ -976,6 +984,7 @@ class FAPFrequencyStatWidget(TaskManagerMixin):
 
     def setup_fap_frequency_settings(self, layout: QVBoxLayout):
         row = QGroupBox(_t("FAPFrequencyStatWidget.title"))
+        widget_registry.register(row, "fap_frequency")
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -1021,8 +1030,8 @@ class FAPFrequencyStatWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                _t("modules.task.input_dir.error_title"),
-                _t("modules.task.input_dir.error_msg"),
+                _t("task.input_dir.error_title"),
+                _t("task.input_dir.error_msg"),
             )
             return
 
@@ -1064,6 +1073,7 @@ class FAPMergeLabWidget(TaskManagerMixin):
 
     def setup_fap_merge_settings(self, layout: QVBoxLayout):
         row = QGroupBox(_t("FAPMergeLabWidget.title"))
+        widget_registry.register(row, "fap_merge_lab")
         row_layout = QGridLayout()
         row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
@@ -1118,8 +1128,8 @@ class FAPMergeLabWidget(TaskManagerMixin):
         if not input_dir or not Path(input_dir).is_dir():
             QMessageBox.warning(
                 self,
-                _t("modules.task.input_dir.error_title"),
-                _t("modules.task.input_dir.error_msg"),
+                _t("task.input_dir.error_title"),
+                _t("task.input_dir.error_msg"),
             )
             return
 

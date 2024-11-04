@@ -25,6 +25,7 @@ class BaseWorker(QThread):
         super().__init__(parent)
         self.mutex = QMutex()
         self.is_running = False
+        self.is_interrupted = False
 
     def emit_output(self, opt: str):
         is_progress, percentage = self.extract_percentage(opt)
@@ -67,11 +68,13 @@ class SubprocessWorker(BaseWorker):
                     self.emit_output(opt.strip())
 
             exit_code = self.process.wait()
-            self.finished_signal.emit(
-                _t("worker.f_signal.complete").format(
-                    cmd=" ".join(self.command), exit_code=exit_code
-                )
-            )
+            with QMutexLocker(self.mutex):
+                if not self.is_interrupted:
+                    self.finished_signal.emit(
+                        _t("worker.f_signal.complete").format(
+                            cmd=" ".join(self.command), exit_code=exit_code
+                        )
+                    )
         except Exception as e:
             self.finished_signal.emit(_t("worker.f_signal.error").format(e=str(e)))
             self.stop()
@@ -81,6 +84,7 @@ class SubprocessWorker(BaseWorker):
             if not self.is_running:
                 return
             self.is_running = False
+            self.is_interrupted = True
         self.terminate_process()
         self.finished_signal.emit(_t("worker.f_signal.stop"))
 
