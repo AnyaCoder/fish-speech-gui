@@ -36,7 +36,7 @@ if platform.system() == "Windows":
         "--show-memory",
         "--show-progress",
         # "--debug",
-        f"--windows-icon-from-ico={ICON_PATH}"
+        f"--windows-icon-from-ico={ICON_PATH}",
     ]
 
 else:
@@ -53,7 +53,7 @@ else:
         "--add-data",
         f"locales{sep}locales",
         "--noconsole",
-        f"--icon={ICON_PATH}"
+        f"--icon={ICON_PATH}",
     ]
 
 sp.check_call(args)
