@@ -31,19 +31,22 @@ dependencies = [
 repository = "https://github.com/AnyaCoder/fish-speech-gui"
 
 [project.gui-scripts]
-fish = "fish.__main__:main"
+fish = "main:main"
 
 [tool.pdm]
 distribution = true
+
+[tool.setuptools]
+packages=["fish"]
+
 [tool.pdm.build]
-includes = ["fish"]
+packages = { find = { include = ["fish*"], exclude = ["assets", "locales"] } }
 
 [tool.pdm.dev-dependencies]
 dev = [
     "isort>=5.12.0",
     "black>=23.3.0",
     "pytest>=7.3.1",
-    "torch>=2.0.1",
     "pyinstaller>=5.11.0",
 ]
 
