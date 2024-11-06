@@ -601,7 +601,7 @@ class MainWindow(QMainWindow):
         self.python.setMinimumWidth(75)
         self.python.setPlaceholderText(_t("backend.python_info"))
         self.python.setToolTip(_t("backend.python_tooltip"))
-        self.python.setText("python")
+        self.python.setText(config.python_path)
         row.addWidget(self.python, 0, 1)
 
         self.select_py_button = QPushButton(_t("backend.select_py"))
@@ -731,7 +731,7 @@ class MainWindow(QMainWindow):
             self.python.setText(file)
             QMessageBox.information(self, "OK", f"Selected a Python interpreter.")
         else:
-            self.python.setText("python")
+            self.python.setText(config.python_path)
             QMessageBox.warning(
                 self, "No Python Selected", "Fallback: built-in python interpreter."
             )
@@ -805,7 +805,7 @@ class MainWindow(QMainWindow):
         config.volume = self.volume_slider.value()
         config.font_size = self.text_editor.font_size_spin.value()
         config.font_family = self.text_editor.font_combo.currentText()
-
+        config.python_path = self.python.text()
         save_config()
 
         # pop up a message box to tell user if they want to save the config to a file

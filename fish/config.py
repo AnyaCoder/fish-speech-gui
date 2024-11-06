@@ -22,6 +22,11 @@ class Config:
     backend: str = "http://localhost:8080/v1/tts"
     ref_id: str = ""
     save_path: str = str(Path.cwd() / "output")
+    python_path: str = (
+        str(Path.cwd() / "fishenv" / "env" / "python.exe")
+        if sys.platform == "win32"
+        else "python"
+    )
 
     input_device: str | None = None
     output_device: str | None = None

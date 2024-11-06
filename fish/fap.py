@@ -733,7 +733,7 @@ class FAPTranscribeWidget(TaskManagerMixin):
         )
         self.num_workers_spin = QSpinBox()
         self.num_workers_spin.setRange(1, 64)
-        self.num_workers_spin.setValue(2)
+        self.num_workers_spin.setValue(1)
         row_layout.addWidget(self.num_workers_spin, 1, *LINE_ALLOC[2][1])
 
         # Language
