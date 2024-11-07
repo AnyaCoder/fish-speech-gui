@@ -82,7 +82,7 @@ tts_output:
 
 action:
   audio: "Now playing: {audio_name}"
-  toggle_console: "Open/Close Console"
+  stream: "Streaming"
   start: "Start Text To Speech"
   stop: "Stop Text To Speech"
   latency: "Latency: {latency:.2f} ms"

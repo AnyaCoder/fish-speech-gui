@@ -78,6 +78,7 @@ tts_output:
 
 action:
   audio: "현재 재생 중: {audio_name}"
+  stream: "스트리밍"
   start: "음성 합성 시작"
   stop: "음성 합성 중지"
   latency: "지연 시간: {latency:.2f} ms"

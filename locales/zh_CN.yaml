@@ -82,6 +82,7 @@ tts_output:
 
 action:
   audio: "现在播放: {audio_name}"
+  stream: "流式"
   start: "开始语音合成"
   stop: "停止语音合成"
   latency: "延迟: {latency:.2f} ms"

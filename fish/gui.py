@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QGridLayout,
@@ -40,8 +41,9 @@ from fish.fap import (
     FAPTranscribeWidget,
 )
 from fish.input import TextEditorWidget
-from fish.modules.console import ConsoleStream, ConsoleWidget
+from fish.modules.console import ConsoleWidget
 from fish.modules.globals import STOP_BUTTON_QSS
+from fish.modules.log import stderr_stream, stdout_stream
 from fish.modules.registry import widget_registry
 from fish.modules.worker import TTSWorker
 from fish.utils.audio import get_devices
@@ -101,22 +103,13 @@ class MainWindow(QMainWindow):
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.setup_action_buttons(self.main_layout)
 
-        self.change_theme(self.theme_combo.currentIndex())  # initialize theme for 1st
+        self.change_theme(self.theme_combo.currentIndex())  # initialize theme first
+
+        stdout_stream.new_message.connect(lambda msg: self.update_console(msg, "white"))
+        stderr_stream.new_message.connect(lambda msg: self.update_console(msg, "red"))
 
         # Use size hint to set a reasonable size
         self.setMinimumWidth(800)
-
-        # Redefined Stream
-        self.stdout_stream = ConsoleStream()
-        self.stderr_stream = ConsoleStream()
-        self.stdout_stream.new_message.connect(
-            lambda msg: self.update_console(msg, "white")
-        )
-        self.stderr_stream.new_message.connect(
-            lambda msg: self.update_console(msg, "red")
-        )
-        sys.stdout = self.stdout_stream
-        sys.stderr = self.stderr_stream
 
         # Uploaded ref files
         self.files = []
@@ -637,10 +630,14 @@ class MainWindow(QMainWindow):
         row_layout = QHBoxLayout()
         widget_registry.register(row, "action_widget")
 
-        self.now_audio = QLabel(_t("action.audio").format(audio_name="(null)"))
-        row_layout.addWidget(self.now_audio)
-        row_layout.addStretch(1)
+        self.now_audio = QLineEdit(_t("action.audio").format(audio_name="(null)"))
+        self.now_audio.setMinimumWidth(200)
 
+        row_layout.addWidget(self.now_audio)
+        # row_layout.addStretch(1)
+
+        self.stream = QCheckBox(_t("action.stream"))
+        row_layout.addWidget(self.stream)
         self.start_button = QPushButton(_t("action.start"))
         self.start_button.clicked.connect(self.start_conversion)
         row_layout.addWidget(self.start_button)
@@ -674,11 +671,19 @@ class MainWindow(QMainWindow):
                     }
                 """
             )
+            self.now_audio.setStyleSheet(
+                """
+                QLineEdit {
+                    border: none;
+                    color: black;
+                }
+            """
+            )
 
         else:
             for widget in widget_registry.get_registered_widgets().values():
                 widget.setStyleSheet("")
-
+            self.now_audio.setStyleSheet("")
         save_config()
         qdarktheme.setup_theme(config.theme)
 
@@ -861,7 +866,7 @@ class MainWindow(QMainWindow):
         )
         self.set_audio(file_name)
 
-    def set_audio(self, audio_file):
+    def set_audio(self, audio_file: str):
         if Path(audio_file).exists():
             self.player.setSource(QUrl.fromLocalFile(audio_file))
             self.play_button.setText(_t("tts_output.play"))
@@ -916,7 +921,8 @@ class MainWindow(QMainWindow):
         text = self.text_editor.input_edit.toPlainText()
 
         audio_name = now.strftime("%Y%m%d_%H%M%S")
-        audio_path = Path(self.save_audio_path.text()) / f"{audio_name}.mp3"
+        wav_suffix = "wav" if self.stream.isChecked() else "mp3"
+        audio_path = Path(self.save_audio_path.text()) / f"{audio_name}.{wav_suffix}"
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         self.audio_path = str(audio_path)
         kwargs = dict(
@@ -926,6 +932,7 @@ class MainWindow(QMainWindow):
             max_new_tokens=self.max_new_tokens_slider.value(),
             temperature=self.temperature_slider.value() / 1000.0,
             mp3_bitrate=int(self.mp3_bitrate_combo.currentText()),
+            stream=self.stream.isChecked(),
         )
         self.tts_worker = TTSWorker(
             ref_files=self.files,
@@ -936,17 +943,22 @@ class MainWindow(QMainWindow):
             audio_path=str(audio_path),
             **kwargs,
         )
-        self.tts_worker.finished.connect(self.on_conversion_finished)
+        self.tts_worker.finished_signal.connect(self.on_conversion_finished)
+        self.tts_worker.packet_delay.connect(
+            lambda t: self.latency_label.setText(
+                _t("action.latency").format(latency=(t * 1000.0))
+            )
+        )
         self.tts_worker.start()
-
-        self.now_audio.setText(_t("action.audio").format(audio_name=str(audio_path)))
 
     def stop_conversion(self):
         self.tts_worker.stop()
-        self.tts_worker.wait()
+        # self.tts_worker.wait()
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
 
-    def on_conversion_finished(self):
-        self.stop_conversion()
-        self.set_audio(self.audio_path)()
+    def on_conversion_finished(self, audio_path):
+        self.now_audio.setText(_t("action.audio").format(audio_name=audio_path))
+        self.set_audio(self.audio_path)
+        self.start_button.setEnabled(True)
+        self.stop_button.setEnabled(False)

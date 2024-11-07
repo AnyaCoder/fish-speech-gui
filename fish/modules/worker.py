@@ -3,13 +3,17 @@ import os
 os.environ["no_proxy"] = "localhost, 127.0.0.1, 0.0.0.0"
 import re
 import subprocess
+import time
+import wave
 from pathlib import Path
 
 import httpx
 import ormsgpack
 import psutil
-from PyQt6.QtCore import QMutex, QMutexLocker, QThread, QWaitCondition, pyqtSignal
+import pyaudio
+from PyQt6.QtCore import QMutex, QMutexLocker, QThread, pyqtSignal
 
+from fish.modules.log import logger
 from fish.utils.audio import ServeReferenceAudio, ServeTTSRequest
 from fish.utils.i18n import _t
 
@@ -106,8 +110,26 @@ class SubprocessWorker(BaseWorker):
         self.process = None
 
 
-class TTSWorker(QThread):
-    finished = pyqtSignal()
+class TimeWorker(QThread):
+    time_signal = pyqtSignal(float)
+
+    def __init__(self, pause_time=0.1, parent=None):
+        super().__init__(parent)
+        self.start_time = time.time()
+        self._stop_requested = False
+        self.pause_time = pause_time
+
+    def run(self):
+        while not self._stop_requested:
+            time.sleep(self.pause_time)
+            self.time_signal.emit(time.time() - self.start_time)
+
+    def stop(self):
+        self._stop_requested = True
+
+
+class TTSWorker(BaseWorker):
+    packet_delay = pyqtSignal(float)
 
     def __init__(
         self,
@@ -120,9 +142,7 @@ class TTSWorker(QThread):
         **kwargs,
     ):
         super().__init__()
-        self.mutex = QMutex()
-        self.wait_condition = QWaitCondition()
-        self._stop_requested = False
+
         self.ref_files = ref_files
         self.ref_id = ref_id if len(ref_id) > 0 else None
         self.backend = backend
@@ -130,36 +150,40 @@ class TTSWorker(QThread):
         self.api_key = api_key
         self.audio_path = audio_path
         self.kwargs = kwargs
+        self.time_worker = TimeWorker(pause_time=0.1)
+        self.time_worker.time_signal.connect(self.calc_elapsed)
+        self.elapsed = 0
+
+    def calc_elapsed(self, elapsed):
+        self.elapsed = elapsed
+        self.packet_delay.emit(elapsed)
 
     def run(self):
-        pre_files = [f for f in self.ref_files if not f.endswith(".lab")]
-        audio_files = [
-            f
-            for f in pre_files
-            if Path(f).exists() and Path(f).with_suffix(".lab").exists()
-        ]
+        self._process_audio_stream()
 
-        request = ServeTTSRequest(
-            text=self.text,
-            references=[
-                ServeReferenceAudio(
-                    audio=Path(f).read_bytes(),
-                    text=Path(f).with_suffix(".lab").read_text(encoding="utf-8"),
-                )
-                for f in audio_files
-            ],
-            reference_id=self.ref_id,
-            streaming=False,
-            format="mp3",
-            chunk_length=self.kwargs["chunk_length"],
-            top_p=self.kwargs["top_p"],
-            repetition_penalty=self.kwargs["repetition_penalty"],
-            max_new_tokens=self.kwargs["max_new_tokens"],
-            temperature=self.kwargs["temperature"],
-            mp3_bitrate=self.kwargs["mp3_bitrate"],
-        )
+    def _process_audio_stream(self):
+        pre_files = self.get_pre_files()
+        audio_files = self.filter_audio_files(pre_files)
+        streaming = self.kwargs.get("stream", False)
+        request = self.create_tts_request(audio_files, streaming)
+        frames_per_buffer = 16384
+        first_packet_time = None
 
-        with httpx.Client() as client, open(f"{self.audio_path}", "wb") as f:
+        self.time_worker.start()
+
+        if streaming:
+            p, stream = self.initialize_audio_stream(frames_per_buffer)
+            self.p = p
+            self.stream = stream
+            f = wave.open(self.audio_path, "wb")
+            f.setnchannels(1)
+            f.setsampwidth(2)
+            f.setframerate(44100)
+        else:
+            f = open(self.audio_path, "wb")
+
+        self.f = f
+        with httpx.Client() as client:
             with client.stream(
                 "POST",
                 self.backend,
@@ -172,19 +196,80 @@ class TTSWorker(QThread):
                 },
                 timeout=None,
             ) as response:
-                for chunk in response.iter_bytes():
-                    self.mutex.lock()
-                    if self._stop_requested:
-                        print("TTS is interrupted!")
-                        self.mutex.unlock()
-                        break
-                    self.mutex.unlock()
-                    f.write(chunk)
+                for chunk in response.iter_bytes(chunk_size=frames_per_buffer):
+                    if first_packet_time is None:
+                        first_packet_time = self.elapsed
+                        self.time_worker.stop()
 
-        self.finished.emit()
+                    if self.is_interrupted:
+                        return
+
+                    if streaming:
+                        stream.write(chunk)
+                        f.writeframesraw(chunk)
+                    else:
+                        f.write(chunk)
+
+        self.finish()
+
+        if not self.is_interrupted:
+            self.finished_signal.emit(self.audio_path)
+
+    def get_pre_files(self):
+        return [f for f in self.ref_files if not f.endswith(".lab")]
+
+    def filter_audio_files(self, pre_files: list):
+        return [
+            f
+            for f in pre_files
+            if Path(f).exists() and Path(f).with_suffix(".lab").exists()
+        ]
+
+    def create_tts_request(self, audio_files: list, streaming: bool):
+        return ServeTTSRequest(
+            text=self.text,
+            references=[
+                ServeReferenceAudio(
+                    audio=Path(f).read_bytes(),
+                    text=Path(f).with_suffix(".lab").read_text(encoding="utf-8"),
+                )
+                for f in audio_files
+            ],
+            reference_id=self.ref_id,
+            streaming=streaming,
+            format="wav" if streaming else "mp3",
+            chunk_length=self.kwargs.get("chunk_length"),
+            top_p=self.kwargs.get("top_p"),
+            repetition_penalty=self.kwargs.get("repetition_penalty"),
+            max_new_tokens=self.kwargs.get("max_new_tokens"),
+            temperature=self.kwargs.get("temperature"),
+            mp3_bitrate=self.kwargs.get("mp3_bitrate"),
+        )
+
+    def initialize_audio_stream(self, frames_per_buffer: int):
+        p = pyaudio.PyAudio()
+        stream = p.open(
+            format=pyaudio.paInt16,
+            channels=1,
+            rate=44100,
+            output=True,
+            frames_per_buffer=frames_per_buffer,
+        )
+        return p, stream
 
     def stop(self):
-        self.mutex.lock()
-        self._stop_requested = True
-        self.mutex.unlock()
-        self.wait_condition.wakeAll()
+        self.is_interrupted = True
+        logger.info("Stop requested!")
+        self.finish()
+
+    def finish(self):
+        streaming = self.kwargs.get("stream", False)
+        if streaming:
+            self.stream.stop_stream()
+            self.stream.close()
+            self.p.terminate()
+            logger.warning("Stop streaming!")
+        self.time_worker.stop()
+        logger.info("Timer off!")
+        self.f.close()
+        logger.info("File closed!")
