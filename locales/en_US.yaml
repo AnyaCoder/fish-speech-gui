@@ -14,6 +14,7 @@ tab:
   page4: "Toolkit 2"
   page5: "Toolkit 3"
   page6: "Console"
+  chat: "Chat Agent"
 
 text_editor:
   input_help: "Press ctrl+m to call out the Quick Insert Emotion tool"
@@ -242,3 +243,19 @@ FAPMergeLabWidget:
   output_filepath: "Output FilePath:"
   output_placeholder: "{name}: Select a filepath"
   template: "Template:"
+
+SettingsDialog:
+  title: "Chat Settings"
+  chat_api_url: "Chat API address"
+  sys_prompt: "System Prompt"
+  save_btn: "Save"
+  cancel_btn: "Cancel"
+
+ChatWidget:
+  title: "LINE Chat Simulator"
+  placeholder: "Send a message to your assistant..."
+  cancel_btn: "Cancel"
+  send_btn: "Send"
+  clear_confirm: "Are you sure to clear chat history?"
+  clear_btn: "Clear"
+  recording: "Recording: {dur:.1f} s"

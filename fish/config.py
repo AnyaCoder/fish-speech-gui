@@ -20,6 +20,13 @@ class Config:
     theme: Literal["auto", "light", "dark"] = "auto"
     locale: str = locale.getdefaultlocale()[0]
     backend: str = "http://localhost:8080/v1/tts"
+    chat_api_url: str = "http://localhost:8080/v1/chat"
+    system_prompt: str = 'You are a voice assistant created by Fish Audio, offering end-to-end\
+ voice interaction for a seamless user experience. You are required to first transcribe\
+ the user\'s speech, then answer it in the following format: "Question: [USER_SPEECH]\n\
+  \nResponse: [YOUR_RESPONSE]\n"\u3002You are required to use the following voice\
+ in this conversation.'
+
     ref_id: str = ""
     save_path: str = str(Path.cwd() / "output")
     python_path: str = (
@@ -40,6 +47,14 @@ class Config:
     repetition_penalty: int = 1200
     temperature: int = 700
 
+    sample_duration: int = 1000
+    fade_duration: int = 80
+    extra_duration: int = 50
+    input_denoise: bool = True
+    output_denoise: bool = True
+    sola_search_duration: int = 12
+    buffer_num: int = 4
+
     sample_rate: int = 44100
     volume: int = 50
     speed: int = 100
@@ -50,6 +65,22 @@ class Config:
     # Plugins
     current_plugin: str | None = None
     plugins: dict[str, dict] = field(default_factory=dict)
+
+    @property
+    def sample_frames(self):
+        return self.sample_duration * self.sample_rate // 1000
+
+    @property
+    def fade_frames(self):
+        return self.fade_duration * self.sample_rate // 1000
+
+    @property
+    def extra_frames(self):
+        return self.extra_duration * self.sample_rate // 1000
+
+    @property
+    def sola_search_frames(self):
+        return self.sola_search_duration * self.sample_rate // 1000
 
 
 default_config_path = str((Path.home() / ".fish" / "config.yaml").absolute())

@@ -8,12 +8,22 @@ import wave
 from pathlib import Path
 
 import httpx
+import numpy as np
 import ormsgpack
 import psutil
 import pyaudio
+import sounddevice as sd
 from PyQt6.QtCore import QMutex, QMutexLocker, QThread, pyqtSignal
 
-from fish.modules.log import logger
+from fish.config import config
+
+if os.environ.get("LOGURU", 0) == 0:
+    from fish.modules.log import logger
+
+    logger.warning("set LOGURU=1 to enable real console log.")
+else:
+    from loguru import logger
+
 from fish.utils.audio import ServeReferenceAudio, ServeTTSRequest
 from fish.utils.i18n import _t
 
@@ -273,3 +283,83 @@ class TTSWorker(BaseWorker):
         logger.info("Timer off!")
         self.f.close()
         logger.info("File closed!")
+
+
+class AudioWorker(QThread):
+    audio_data_signal = pyqtSignal(float)
+
+    def __init__(
+        self, save_as_file: bool = False, output_file: str = None, parent=None
+    ):
+        super().__init__(parent)
+        self.mutex = QMutex()
+        self.is_running = True
+        self.output_file = output_file
+        self.save_as_file = save_as_file
+        self.file_initialized = False
+
+        logger.info(output_file)
+        # self.input_wav = np.zeros(
+        #     (
+        #         config.sample_frames
+        #         + config.fade_frames
+        #         + config.sola_search_frames
+        #         + 2 * config.extra_frames,
+        #     ),
+        #     dtype=np.float32,
+        # )
+
+    def run(self):
+        try:
+            # Open the output file once for the duration of recording
+            self.f = wave.open(self.output_file, "wb")
+            self.f.setnchannels(1)
+            self.f.setsampwidth(2)  # 2 bytes for 16-bit audio
+            self.f.setframerate(config.sample_rate)
+            self.file_initialized = True
+        except Exception as e:
+            logger.error(f"Audio recording initialize failed!: {e}")
+            self.file_initialized = False
+            return  # Stop the thread if initialization fails
+
+        with sd.InputStream(
+            callback=self.audio_callback,
+            channels=1,
+            samplerate=config.sample_rate,
+            dtype="float32",
+            blocksize=int(config.sample_frames * 0.1),  # 0.1s
+            device=config.input_device,
+        ):
+            while self.is_running:
+                time.sleep(0.1)
+
+        # Close the file once recording is stopped
+        self.f.close()
+
+    def stop(self):
+        self.is_running = False
+        self.wait()
+
+    def audio_callback(self, indata: np.ndarray, frames: int, time, status):
+        if status:
+            logger.warning(f"frames: {frames}, status: {status}")
+
+        # self.input_wav[:frames] = indata[:, 0]
+        audio_bytes = (indata[:, 0] * 32767).astype(np.int16).tobytes()
+        if self.save_as_file:
+            self.save_audio_data(audio_bytes)
+        if self.is_running:
+            self.audio_data_signal.emit(0.1)
+
+    def save_audio_data(self, audio_bytes):
+        self.mutex.lock()
+        try:
+            if self.file_initialized:
+                # logger.info(f"write: {len(audio_bytes)}")
+                self.f.writeframesraw(audio_bytes)
+        except IOError as e:
+            logger.error(f"IO error saving audio data: {e}")
+        except Exception as e:
+            logger.error(f"General error saving audio data: {e}")
+        finally:
+            self.mutex.unlock()

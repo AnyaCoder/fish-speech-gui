@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from fish.chat import ChatWidget
 from fish.config import application_path, config, load_config, save_config
 from fish.fap import (
     FAPFrequencyStatWidget,
@@ -93,6 +94,7 @@ class MainWindow(QMainWindow):
         )
         self.tab_widget.addTab(self.create_settings_tab1(), _t("tab.page1"))
         self.tab_widget.addTab(self.create_settings_tab2(), _t("tab.page2"))
+        self.tab_widget.addTab(self.create_settings_chat(), _t("tab.chat"))
         self.tab_widget.addTab(self.create_settings_tab3(), _t("tab.page3"))
         self.tab_widget.addTab(self.create_settings_tab4(), _t("tab.page4"))
         self.tab_widget.addTab(self.create_settings_tab5(), _t("tab.page5"))
@@ -251,6 +253,34 @@ class MainWindow(QMainWindow):
         layout6.addWidget(self.console_widget)
         tab6.setLayout(layout6)
         return tab6
+
+    def create_settings_chat(self):
+        chat = ChatWidget()
+        widget_registry.register(chat, "chat")
+        chat.add_message(
+            "你好！这是recv者的回复，消息可能会比较长，以测试换行功能是否正常工作。当窗口大小变化时，消息气泡应该会自动调整其宽度，确保用户体验。",
+            is_sender=False,
+        )
+        chat.add_message(
+            "你好！这是发送者的回复，消息可能会比较长，以测试换行功能是否正常工作。当窗口大小变化时，消息气泡应该会自动调整其宽度，确保用户体验。",
+            is_sender=True,
+        )
+        chat.add_message("明白了，谢谢！", is_sender=False)
+        chat.add_message(
+            "语音消息示例",
+            is_sender=True,
+            is_voice=True,
+            is_voice_clickable=True,
+            voice_duration=3,
+        )
+        chat.add_message(
+            "语音消息示例",
+            is_sender=False,
+            is_voice=True,
+            is_voice_clickable=False,
+            voice_duration=3,
+        )
+        return chat
 
     def setup_ui_settings(self, layout: QVBoxLayout):
         # we have language and backend settings in the first row
@@ -634,6 +664,7 @@ class MainWindow(QMainWindow):
         self.now_audio.setMinimumWidth(200)
 
         row_layout.addWidget(self.now_audio)
+        self.now_audio.setReadOnly(True)
         # row_layout.addStretch(1)
 
         self.stream = QCheckBox(_t("action.stream"))
@@ -684,6 +715,7 @@ class MainWindow(QMainWindow):
             for widget in widget_registry.get_registered_widgets().values():
                 widget.setStyleSheet("")
             self.now_audio.setStyleSheet("")
+
         save_config()
         qdarktheme.setup_theme(config.theme)
 
