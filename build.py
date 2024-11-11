@@ -28,10 +28,15 @@ if platform.system() == "Windows":
         "--output-filename=fish",
         "--include-data-dir=assets=assets",
         "--include-data-dir=locales=locales",
-        "--windows-disable-console",
+        "--windows-console-mode=disable",
         "--enable-plugins=pkg-resources",
         "--enable-plugins=pyqt6",
-        "--nofollow-import-to=numpy,mkl,click",
+        "--nofollow-import-to=torch.cuda,torgb,torch.nn,torch.optim,\
+            torch.utils,torch.distributed,torch.compiler,torch.functional,\
+            torch.jit,torch.linalg,torch.amp,torch.ao,torch.autograd\
+            torch.xpu,torch.mps,torch.npu,torch.fft,torch.func",
+        # --follow-import-to=numpy
+        "--nofollow-import-to=mkl,click,scipy,pandas,matplotlib",
         "--include-qt-plugins=sensible,multimedia",
         "--show-memory",
         "--show-progress",

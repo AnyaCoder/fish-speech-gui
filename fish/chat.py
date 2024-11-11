@@ -68,8 +68,9 @@ class SettingsDialog(QDialog):
         # Add form layout and buttons to the main layout
         layout.addLayout(form_layout)
         button_layout = QHBoxLayout()
-        button_layout.addWidget(cancel_button)
+
         button_layout.addWidget(save_button)
+        button_layout.addWidget(cancel_button)
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
@@ -81,6 +82,10 @@ class SettingsDialog(QDialog):
 
         if self.chat_api_url and self.system_prompt:  # Ensure both fields are not empty
             self.accept()
+        else:
+            QMessageBox.warning(
+                self, "Invalid", "Input non-empty valid API URL and System Prompt"
+            )
 
 
 class MessageBubble(QWidget):
@@ -402,10 +407,6 @@ class ChatWidget(QWidget):
                 "Done",
                 f"Chat API is saved as: \n{self.chat_api_url}\n\n"
                 + f"System Prompt is saved as: \n{self.system_prompt}",
-            )
-        else:
-            QMessageBox.warning(
-                self, "Invalid", "Input non-empty valid API URL and System Prompt"
             )
 
     def toggle_voice_mode(self):

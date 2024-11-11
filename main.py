@@ -24,7 +24,7 @@ def main():
     splash.show()
     QtWidgets.QApplication.processEvents()  # assure display splash
     window = MainWindow()
-    qdarktheme.setup_theme(config.theme)
+    # qdarktheme.setup_theme(config.theme)
     # Make output to demonstrate real-time capture
 
     print("This laziman message is redirected to the console.", file=sys.stderr)

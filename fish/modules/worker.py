@@ -1,17 +1,15 @@
 import os
-
-os.environ["no_proxy"] = "localhost, 127.0.0.1, 0.0.0.0"
 import re
 import subprocess
 import time
 import wave
 from pathlib import Path
 
-import httpx
 import numpy as np
 import ormsgpack
 import psutil
 import pyaudio
+import requests
 import sounddevice as sd
 from PyQt6.QtCore import QMutex, QMutexLocker, QThread, pyqtSignal
 
@@ -193,32 +191,29 @@ class TTSWorker(BaseWorker):
             f = open(self.audio_path, "wb")
 
         self.f = f
-        with httpx.Client() as client:
-            with client.stream(
-                "POST",
-                self.backend,
-                content=ormsgpack.packb(
-                    request, option=ormsgpack.OPT_SERIALIZE_PYDANTIC
-                ),
-                headers={
-                    "authorization": f"Bearer {self.api_key}",
-                    "content-type": "application/msgpack",
-                },
-                timeout=None,
-            ) as response:
-                for chunk in response.iter_bytes(chunk_size=frames_per_buffer):
-                    if first_packet_time is None:
-                        first_packet_time = self.elapsed
-                        self.time_worker.stop()
+        response = requests.post(
+            self.backend,
+            data=ormsgpack.packb(request, option=ormsgpack.OPT_SERIALIZE_PYDANTIC),
+            stream=streaming,
+            headers={
+                "authorization": f"Bearer {self.api_key}",
+                "content-type": "application/msgpack",
+            },
+        )
 
-                    if self.is_interrupted:
-                        return
+        for chunk in response.iter_content(chunk_size=frames_per_buffer):
+            if first_packet_time is None:
+                first_packet_time = self.elapsed
+                self.time_worker.stop()
 
-                    if streaming:
-                        stream.write(chunk)
-                        f.writeframesraw(chunk)
-                    else:
-                        f.write(chunk)
+            if self.is_interrupted:
+                return
+
+            if streaming:
+                stream.write(chunk)
+                f.writeframesraw(chunk)
+            else:
+                f.write(chunk)
 
         self.finish()
 
