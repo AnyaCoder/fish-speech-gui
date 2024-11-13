@@ -19,8 +19,13 @@ else:
 class Config:
     theme: Literal["auto", "light", "dark"] = "auto"
     locale: str = locale.getdefaultlocale()[0]
+    # Service: TTS
     backend: str = "http://localhost:8080/v1/tts"
-    chat_api_url: str = "http://localhost:8080/v1/chat"
+    # Service: Agent
+    decoder_url: str = "http://localhost:8080/v1/vqgan"
+    llm_url: str = "http://localhost:8080/v1/chat"
+    proxy_url: str = "http://127.0.0.1:7890"
+
     system_prompt: str = 'You are a voice assistant created by Fish Audio, offering end-to-end\
  voice interaction for a seamless user experience. You are required to first transcribe\
  the user\'s speech, then answer it in the following format: "Question: [USER_SPEECH]\n\

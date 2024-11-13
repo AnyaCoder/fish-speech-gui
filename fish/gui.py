@@ -257,29 +257,6 @@ class MainWindow(QMainWindow):
     def create_settings_chat(self):
         chat = ChatWidget()
         widget_registry.register(chat, "chat")
-        chat.add_message(
-            "你好！这是recv者的回复，消息可能会比较长，以测试换行功能是否正常工作。当窗口大小变化时，消息气泡应该会自动调整其宽度，确保用户体验。",
-            is_sender=False,
-        )
-        chat.add_message(
-            "你好！这是发送者的回复，消息可能会比较长，以测试换行功能是否正常工作。当窗口大小变化时，消息气泡应该会自动调整其宽度，确保用户体验。",
-            is_sender=True,
-        )
-        chat.add_message("明白了，谢谢！", is_sender=False)
-        chat.add_message(
-            "语音消息示例",
-            is_sender=True,
-            is_voice=True,
-            is_voice_clickable=True,
-            voice_duration=3,
-        )
-        chat.add_message(
-            "语音消息示例",
-            is_sender=False,
-            is_voice=True,
-            is_voice_clickable=False,
-            voice_duration=3,
-        )
         return chat
 
     def setup_ui_settings(self, layout: QVBoxLayout):
@@ -513,10 +490,10 @@ class MainWindow(QMainWindow):
         self.upload_button.setFixedWidth(100)
         row_layout.addWidget(self.upload_button, 2, 2, 1, 1)
 
-        self.upload_button = QPushButton(_t("reference.remove"))
-        self.upload_button.clicked.connect(self.remove_files)
-        self.upload_button.setFixedWidth(100)
-        row_layout.addWidget(self.upload_button, 3, 2, 1, 1)
+        self.remove_button = QPushButton(_t("reference.remove"))
+        self.remove_button.clicked.connect(self.remove_files)
+        self.remove_button.setFixedWidth(100)
+        row_layout.addWidget(self.remove_button, 3, 2, 1, 1)
 
         row.setLayout(row_layout)
         layout.addWidget(row)
@@ -667,8 +644,8 @@ class MainWindow(QMainWindow):
         self.now_audio.setReadOnly(True)
         # row_layout.addStretch(1)
 
-        self.stream = QCheckBox(_t("action.stream"))
-        row_layout.addWidget(self.stream)
+        self.streaming = QCheckBox(_t("action.stream"))
+        row_layout.addWidget(self.streaming)
         self.start_button = QPushButton(_t("action.start"))
         self.start_button.clicked.connect(self.start_conversion)
         row_layout.addWidget(self.start_button)
@@ -953,8 +930,8 @@ class MainWindow(QMainWindow):
         text = self.text_editor.input_edit.toPlainText()
 
         audio_name = now.strftime("%Y%m%d_%H%M%S")
-        wav_suffix = "wav" if self.stream.isChecked() else "mp3"
-        audio_path = Path(self.save_audio_path.text()) / f"{audio_name}.{wav_suffix}"
+        format = "wav" if self.streaming.isChecked() else "mp3"
+        audio_path = Path(self.save_audio_path.text()) / f"{audio_name}.{format}"
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         self.audio_path = str(audio_path)
         kwargs = dict(
@@ -964,7 +941,7 @@ class MainWindow(QMainWindow):
             max_new_tokens=self.max_new_tokens_slider.value(),
             temperature=self.temperature_slider.value() / 1000.0,
             mp3_bitrate=int(self.mp3_bitrate_combo.currentText()),
-            stream=self.stream.isChecked(),
+            format=format,
         )
         self.tts_worker = TTSWorker(
             ref_files=self.files,
@@ -973,6 +950,7 @@ class MainWindow(QMainWindow):
             text=text,
             api_key=self.api_key.text(),
             audio_path=str(audio_path),
+            streaming=self.streaming.isChecked(),
             **kwargs,
         )
         self.tts_worker.finished_signal.connect(self.on_conversion_finished)

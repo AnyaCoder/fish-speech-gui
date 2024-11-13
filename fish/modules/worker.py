@@ -4,6 +4,7 @@ import subprocess
 import time
 import wave
 from pathlib import Path
+from typing import Iterator, List
 
 import numpy as np
 import ormsgpack
@@ -11,9 +12,11 @@ import psutil
 import pyaudio
 import requests
 import sounddevice as sd
-from PyQt6.QtCore import QMutex, QMutexLocker, QThread, pyqtSignal
+from PyQt6.QtCore import QMutex, QMutexLocker, QRunnable, QThread, pyqtSignal
 
 from fish.config import config
+from fish.services.tts import ServeReferenceAudio, ServeTTSRequest
+from fish.utils.i18n import _t
 
 if os.environ.get("LOGURU", 0) == 0:
     from fish.modules.log import logger
@@ -22,8 +25,6 @@ if os.environ.get("LOGURU", 0) == 0:
 else:
     from loguru import logger
 
-from fish.utils.audio import ServeReferenceAudio, ServeTTSRequest
-from fish.utils.i18n import _t
 
 env = os.environ.copy()
 env["MODELSCOPE_CACHE"] = os.path.join(os.environ.get("TEMP", "."), "funasr")
@@ -123,114 +124,161 @@ class TimeWorker(QThread):
 
     def __init__(self, pause_time=0.1, parent=None):
         super().__init__(parent)
-        self.start_time = time.time()
         self._stop_requested = False
         self.pause_time = pause_time
 
     def run(self):
+        start_time = time.time()
         while not self._stop_requested:
             time.sleep(self.pause_time)
-            self.time_signal.emit(time.time() - self.start_time)
+            self.time_signal.emit(time.time() - start_time)
 
     def stop(self):
         self._stop_requested = True
 
 
-class TTSWorker(BaseWorker):
+class AudioPlayWorker(QThread):
+    finished_signal = pyqtSignal(str)
     packet_delay = pyqtSignal(float)
 
     def __init__(
         self,
-        ref_files: list[str],
+        audio_path: str,
+        streaming: bool,
+        iterable_chunks: Iterator[bytes] = None,
+        frames_per_buffer: int = 16384,
+    ):
+        super().__init__()
+        self.audio_path = audio_path
+        self.streaming = streaming
+        self.iterable_chunks = iterable_chunks
+        self.frames_per_buffer = frames_per_buffer
+        self.is_interrupted = False
+
+        self.elapsed = 0
+        self.p = None
+        self.stream = None
+
+        self.time_worker = TimeWorker(pause_time=0.1)
+        self.time_worker.time_signal.connect(self.calc_elapsed)
+
+    # Sync Methods:
+    def calc_elapsed(self, elapsed):
+        self.elapsed = elapsed
+        self.packet_delay.emit(elapsed)
+
+    def initialize_audio_stream(self):
+        p = pyaudio.PyAudio()
+        stream = p.open(
+            format=pyaudio.paInt16,
+            channels=1,
+            rate=44100,
+            output=True,
+            frames_per_buffer=self.frames_per_buffer,
+        )
+        return p, stream
+
+    def start_audio_streaming(self):
+        if self.streaming:
+            self.p, self.stream = self.initialize_audio_stream()
+            self.f = wave.open(self.audio_path, "wb")
+            self.f.setnchannels(1)
+            self.f.setsampwidth(2)
+            self.f.setframerate(44100)
+        else:
+            self.f = open(self.audio_path, "wb")
+
+    def audio_streaming(self):
+        first_packet_time = None
+        for chunk in self.iterable_chunks:
+            if self.is_interrupted:
+                break
+            if self.streaming:
+                self.stream.write(chunk)
+                self.f.writeframesraw(chunk)
+            else:
+                self.f.write(chunk)
+
+            if first_packet_time is None:
+                first_packet_time = self.elapsed
+                self.time_worker.stop()
+
+    def stop_audio_streaming(self):
+        if self.streaming and self.stream:
+            self.stream.stop_stream()
+            self.stream.close()
+            self.p.terminate()
+        self.f.close()
+
+    def run(self):
+        self.start_audio_streaming()
+        if self.iterable_chunks:
+            self.audio_streaming()
+        self.stop_audio_streaming()
+        if not self.is_interrupted:
+            self.finished_signal.emit(self.audio_path)
+
+    def stop(self):
+        self.is_interrupted = True
+        self.time_worker.stop()
+
+    # Async Methods:
+    async def async_audio_streaming(self, async_chunks):
+        first_packet_time = None
+        async for chunk in async_chunks:
+            if self.is_interrupted:
+                break
+            if self.streaming:
+                self.stream.write(chunk)
+                self.f.writeframesraw(chunk)
+            else:
+                self.f.write(chunk)
+
+            if first_packet_time is None:
+                first_packet_time = self.elapsed
+                self.time_worker.stop()
+
+    async def run_async(self, async_chunks):
+        self.time_worker.start()
+        self.start_audio_streaming()
+        await self.async_audio_streaming(async_chunks)
+        self.stop_audio_streaming()
+        if not self.is_interrupted:
+            self.finished_signal.emit(self.audio_path)
+        self.time_worker.stop()
+
+
+class TTSWorker(AudioPlayWorker):
+    def __init__(
+        self,
+        ref_files: List[str],
         ref_id: str,
         backend: str,
         text: str,
         api_key: str,
         audio_path: str,
+        streaming: bool,
         **kwargs,
     ):
-        super().__init__()
-
+        super().__init__(audio_path, streaming)
         self.ref_files = ref_files
-        self.ref_id = ref_id if len(ref_id) > 0 else None
+        self.ref_id = ref_id if ref_id else None
         self.backend = backend
         self.text = text
         self.api_key = api_key
-        self.audio_path = audio_path
         self.kwargs = kwargs
-        self.time_worker = TimeWorker(pause_time=0.1)
-        self.time_worker.time_signal.connect(self.calc_elapsed)
-        self.elapsed = 0
-
-    def calc_elapsed(self, elapsed):
-        self.elapsed = elapsed
-        self.packet_delay.emit(elapsed)
-
-    def run(self):
-        self._process_audio_stream()
-
-    def _process_audio_stream(self):
-        pre_files = self.get_pre_files()
-        audio_files = self.filter_audio_files(pre_files)
-        streaming = self.kwargs.get("stream", False)
-        request = self.create_tts_request(audio_files, streaming)
-        frames_per_buffer = 16384
-        first_packet_time = None
-
-        self.time_worker.start()
-
-        if streaming:
-            p, stream = self.initialize_audio_stream(frames_per_buffer)
-            self.p = p
-            self.stream = stream
-            f = wave.open(self.audio_path, "wb")
-            f.setnchannels(1)
-            f.setsampwidth(2)
-            f.setframerate(44100)
-        else:
-            f = open(self.audio_path, "wb")
-
-        self.f = f
-        response = requests.post(
-            self.backend,
-            data=ormsgpack.packb(request, option=ormsgpack.OPT_SERIALIZE_PYDANTIC),
-            stream=streaming,
-            headers={
-                "authorization": f"Bearer {self.api_key}",
-                "content-type": "application/msgpack",
-            },
-        )
-
-        for chunk in response.iter_content(chunk_size=frames_per_buffer):
-            if first_packet_time is None:
-                first_packet_time = self.elapsed
-                self.time_worker.stop()
-
-            if self.is_interrupted:
-                return
-
-            if streaming:
-                stream.write(chunk)
-                f.writeframesraw(chunk)
-            else:
-                f.write(chunk)
-
-        self.finish()
-
-        if not self.is_interrupted:
-            self.finished_signal.emit(self.audio_path)
 
     def get_pre_files(self):
         return [f for f in self.ref_files if not f.endswith(".lab")]
 
-    def filter_audio_files(self, pre_files: list):
+    def filter_audio_files(self, pre_files: List[str]):
         return [
             f
             for f in pre_files
             if Path(f).exists() and Path(f).with_suffix(".lab").exists()
         ]
 
-    def create_tts_request(self, audio_files: list, streaming: bool):
+    def create_tts_request(self, audio_files: List[str]):
         return ServeTTSRequest(
             text=self.text,
             references=[
@@ -241,9 +289,9 @@ class TTSWorker(BaseWorker):
                 for f in audio_files
             ],
             reference_id=self.ref_id,
-            streaming=streaming,
-            format="wav" if streaming else "mp3",
-            chunk_length=self.kwargs.get("chunk_length"),
+            streaming=self.streaming,
+            format=self.kwargs.get("format", "wav"),
+            chunk_length=self.kwargs.get("chunk_length", 200),
             top_p=self.kwargs.get("top_p"),
             repetition_penalty=self.kwargs.get("repetition_penalty"),
             max_new_tokens=self.kwargs.get("max_new_tokens"),
@@ -251,36 +299,34 @@ class TTSWorker(BaseWorker):
             mp3_bitrate=self.kwargs.get("mp3_bitrate"),
         )
 
-    def initialize_audio_stream(self, frames_per_buffer: int):
-        p = pyaudio.PyAudio()
-        stream = p.open(
-            format=pyaudio.paInt16,
-            channels=1,
-            rate=44100,
-            output=True,
-            frames_per_buffer=frames_per_buffer,
-        )
-        return p, stream
+    def run(self):
+        pre_files = self.get_pre_files()
+        audio_files = self.filter_audio_files(pre_files)
+        request = self.create_tts_request(audio_files)
 
-    def stop(self):
-        self.is_interrupted = True
-        logger.info("Stop requested!")
-        self.finish()
-
-    def finish(self):
-        streaming = self.kwargs.get("stream", False)
-        if streaming:
-            self.stream.stop_stream()
-            self.stream.close()
-            self.p.terminate()
-            logger.warning("Stop streaming!")
-        self.time_worker.stop()
-        logger.info("Timer off!")
-        self.f.close()
-        logger.info("File closed!")
+        try:
+            self.time_worker.start()
+            response = requests.post(
+                self.backend,
+                data=ormsgpack.packb(request, option=ormsgpack.OPT_SERIALIZE_PYDANTIC),
+                stream=self.streaming,
+                headers={
+                    "authorization": f"Bearer {self.api_key}",
+                    "content-type": "application/msgpack",
+                },
+            )
+            response.raise_for_status()
+            self.iterable_chunks = response.iter_content(
+                chunk_size=self.frames_per_buffer
+            )
+            super().run()
+        except requests.RequestException as e:
+            logger.error(f"Network request failed: {e}")
+        finally:
+            self.stop()  # Ensure the thread stops gracefully if there's an error
 
 
-class AudioWorker(QThread):
+class AudioRecordWorker(QThread):
     audio_data_signal = pyqtSignal(float)
 
     def __init__(
@@ -358,3 +404,12 @@ class AudioWorker(QThread):
             logger.error(f"General error saving audio data: {e}")
         finally:
             self.mutex.unlock()
+
+
+class AsyncTaskWorker(QRunnable):
+    def __init__(self, worker):
+        super().__init__()
+        self.worker = worker
+
+    def run(self):
+        self.worker.run()

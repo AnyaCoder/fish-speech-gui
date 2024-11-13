@@ -5,7 +5,7 @@ import time
 import qdarktheme
 from PyQt6 import QtCore, QtGui, QtWidgets
 
-from fish.config import application_path, config
+from fish.config import application_path
 from fish.gui import MainWindow
 
 

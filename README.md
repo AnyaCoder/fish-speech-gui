@@ -18,11 +18,15 @@
 
 ## Basic Setup
 
-<img src="assets/basic.png" width="800" />
+<img src="images/basic.png" width="800" />
 
 ## Text to Speech
 
-<img src="assets/tts.png" width="800" />
+<img src="images/tts.png" width="800" />
+
+## Chat With Your Agent
+
+<img src="images/agent.png" width="800" />
 
 # Build from Source
 

@@ -247,7 +247,11 @@ FAPMergeLabWidget:
 SettingsDialog:
   title: "Chat Settings"
   chat_api_url: "Chat API address"
+  decoder_url: "Decoder API address"
+  llm_url: "LLM API address"
+  proxy_url: "Proxy URL(restart needed)"
   sys_prompt: "System Prompt"
+  sys_audio: "System Audio"
   save_btn: "Save"
   cancel_btn: "Cancel"
 
