@@ -28,6 +28,7 @@ if platform.system() == "Windows":
         "--output-filename=fish",
         "--include-data-dir=assets=assets",
         "--include-data-dir=locales=locales",
+        "--include-data-files=fish_audio_preprocess=fish_audio_preprocess/=**/*.py",
         "--windows-console-mode=disable",
         "--enable-plugins=pkg-resources",
         "--enable-plugins=pyqt6",

@@ -34,9 +34,7 @@
 conda create -n pyqt python=3.10
 conda activate pyqt
 pip install pdm
-# for windows nuitka build
-pip install nuitka
-pdm install
+pdm sync
 pdm run build.py
 ```
 
@@ -56,3 +54,17 @@ dist\fish.exe
 # linux
 dist/fish
 ```
+
+## Tips
+
+### Use FAP(Fish Audio Preprocess)
+
+1. To install the dependencies for the **FAP Toolkit**, run the following command in this project root:
+
+```bash
+pip install -r extra-requirements.txt
+```
+
+2. Open the GUI and ensure the Python path is correctly configured to the Python environment where you ran the above command.
+
+3. You are now ready to use the toolkit.

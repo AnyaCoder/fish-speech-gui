@@ -1,6 +1,6 @@
 [project]
 name = "fish-speech-gui"
-version = "1.4.2"
+version = "1.4.3"
 description = "fish-speech comfortable GUI"
 readme = "README.md"
 requires-python = "<3.12,>=3.10"
@@ -17,14 +17,20 @@ classifiers = [
 
 dependencies = [
     "noisereduce>=2.0.1",
-    "sounddevice>=0.4.6",
+    "sounddevice==0.4.6",
+    "soundfile==0.12.1",
+    "pyaudio==0.2.14",
     "pyyaml>=6.0",
-    "PyQt6>=6.5.0",
+    "PyQt6==6.5.0",
+    "pyqt6-qt6==6.5.1",
+    "pyqt6-sip==13.5.1",
     "pyqtdarktheme==2.1.0",
     "requests>=2.31.0",
-    "librosa==0.9.2",
     "pydantic>=2.9.1",
     "ormsgpack>=1.5.0",
+    "numpy==1.24.3",
+    "psutil>=6.1.0",
+    "loguru>=0.7.2",
 ]
 
 [project.urls]
@@ -46,8 +52,9 @@ packages = { find = { include = ["fish*"], exclude = ["assets", "locales"] } }
 dev = [
     "isort>=5.12.0",
     "black>=23.3.0",
-    "pytest>=7.3.1",
+    "pytest==7.3.1",
     "pyinstaller>=5.11.0",
+    "nuitka>=2.4.11",
 ]
 
 [build-system]

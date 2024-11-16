@@ -830,7 +830,10 @@ class MessageWorker(QObject):
 
         if self.state.added_sysaudio is False and len(self.system_audios) > 0:
             self.state.added_sysaudio = True
-            sys_codes = [await agent.get_codes(audio) for audio in self.system_audios]
+            sys_codes = await asyncio.gather(
+                *[agent.get_codes(audio) for audio in self.system_audios]
+            )
+
             for sys_code in sys_codes:
                 self.state.append_to_chat_ctx(
                     ServeVQPart(codes=sys_code), role="system"
@@ -922,7 +925,9 @@ if __name__ == "__main__":
         is_voice_clickable=False,
         voice_duration=12,
     )
-    chat_widget.add_message("语音消息示例2", is_sender=False, is_voice=True, voice_duration=3)
+    chat_widget.add_message(
+        "语音消息示例2", is_sender=False, is_voice=True, voice_duration=3
+    )
 
     chat_widget.show()
 

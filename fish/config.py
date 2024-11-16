@@ -26,11 +26,13 @@ class Config:
     llm_url: str = "http://localhost:8080/v1/chat"
     proxy_url: str = "http://127.0.0.1:7890"
 
-    system_prompt: str = 'You are a voice assistant created by Fish Audio, offering end-to-end\
+    system_prompt: str = (
+        'You are a voice assistant created by Fish Audio, offering end-to-end\
  voice interaction for a seamless user experience. You are required to first transcribe\
  the user\'s speech, then answer it in the following format: "Question: [USER_SPEECH]\n\
   \nResponse: [YOUR_RESPONSE]\n"\u3002You are required to use the following voice\
  in this conversation.'
+    )
 
     ref_id: str = ""
     save_path: str = str(Path.cwd() / "output")
