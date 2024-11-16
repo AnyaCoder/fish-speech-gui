@@ -17,8 +17,20 @@ jobs:
         with:
           python-version: "3.10"
       - uses: pdm-project/setup-pdm@v3
-      - name: Install dependencies
-        run: pdm sync
+      - name: Install dependencies for lint job
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ca-certificates \
+            libsox-dev \
+            build-essential \
+            cmake \
+            libasound-dev \
+            portaudio19-dev \
+            libportaudio2 \
+            libportaudiocpp0 \
+            ffmpeg
+          pdm sync
       - name: Lint with black and isort
         run: pdm run lint-check
 
@@ -38,7 +50,28 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - uses: pdm-project/setup-pdm@v3
       - name: Install dependencies
-        run: pdm sync
+        run: |
+          if [ $RUNNER_OS == "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y \
+              ca-certificates \
+              libsox-dev \
+              build-essential \
+              cmake \
+              libasound-dev \
+              portaudio19-dev \
+              libportaudio2 \
+              libportaudiocpp0 \
+              ffmpeg
+          elif [ $RUNNER_OS == "macOS" ]; then
+            brew install \
+              ca-certificates \
+              sox \
+              cmake \
+              portaudio \
+              ffmpeg
+          fi
+          pdm sync
       - name: Build pyinstaller package
         env:
           PACKAGE_TYPE: ${{ matrix.package-type }}
@@ -46,7 +79,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: rtvc-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.package-type }}
+          name: fish-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.package-type }}
           path: dist
 
   # publish:
