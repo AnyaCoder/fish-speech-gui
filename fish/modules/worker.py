@@ -4,7 +4,7 @@ import subprocess
 import time
 import wave
 from pathlib import Path
-from typing import Iterator, List
+from typing import AsyncIterator, Iterator, List
 
 import numpy as np
 import ormsgpack
@@ -145,16 +145,15 @@ class AudioPlayWorker(QThread):
         self,
         audio_path: str,
         streaming: bool,
-        iterable_chunks: Iterator[bytes] = None,
         frames_per_buffer: int = 16384,
     ):
         super().__init__()
         self.audio_path = audio_path
         self.streaming = streaming
-        self.iterable_chunks = iterable_chunks
         self.frames_per_buffer = frames_per_buffer
-        self.is_interrupted = False
+        self.iterable_chunks = None
 
+        self.is_interrupted = False
         self.elapsed = 0
         self.p = None
         self.stream = None
@@ -162,7 +161,6 @@ class AudioPlayWorker(QThread):
         self.time_worker = TimeWorker(pause_time=0.1)
         self.time_worker.time_signal.connect(self.calc_elapsed)
 
-    # Sync Methods:
     def calc_elapsed(self, elapsed):
         self.elapsed = elapsed
         self.packet_delay.emit(elapsed)
@@ -190,7 +188,26 @@ class AudioPlayWorker(QThread):
 
     def audio_streaming(self):
         first_packet_time = None
+        if not self.iterable_chunks:
+            return
         for chunk in self.iterable_chunks:
+            if self.is_interrupted:
+                break
+            if self.streaming:
+                self.stream.write(chunk)
+                self.f.writeframesraw(chunk)
+            else:
+                self.f.write(chunk)
+
+            if first_packet_time is None:
+                first_packet_time = self.elapsed
+                self.time_worker.stop()
+
+    async def async_audio_streaming(self):
+        first_packet_time = None
+        if not self.iterable_chunks:
+            return
+        async for chunk in self.iterable_chunks:
             if self.is_interrupted:
                 break
             if self.streaming:
@@ -209,46 +226,38 @@ class AudioPlayWorker(QThread):
             self.stream.close()
             self.p.terminate()
         self.f.close()
+        logger.info("Playback Finished")
+
+    def set_chunks(self, chunks: Iterator[bytes] | AsyncIterator[bytes] = None):
+        self.iterable_chunks = chunks
 
     def run(self):
+        logger.info("Sync Playback Started")
         self.start_audio_streaming()
-        if self.iterable_chunks:
-            self.audio_streaming()
+        self.audio_streaming()
         self.stop_audio_streaming()
         if not self.is_interrupted:
+            logger.info("Sync Playback Finished")
+            self.finished_signal.emit(self.audio_path)
+
+    async def run_async(self):
+        logger.info("Async Playback Started")
+        self.start_audio_streaming()
+        await self.async_audio_streaming()
+        self.stop_audio_streaming()
+        if not self.is_interrupted:
+            logger.info("Async Playback Finished")
             self.finished_signal.emit(self.audio_path)
 
     def stop(self):
         self.is_interrupted = True
         self.time_worker.stop()
-
-    # Async Methods:
-    async def async_audio_streaming(self, async_chunks):
-        first_packet_time = None
-        async for chunk in async_chunks:
-            if self.is_interrupted:
-                break
-            if self.streaming:
-                self.stream.write(chunk)
-                self.f.writeframesraw(chunk)
-            else:
-                self.f.write(chunk)
-
-            if first_packet_time is None:
-                first_packet_time = self.elapsed
-                self.time_worker.stop()
-
-    async def run_async(self, async_chunks):
-        self.time_worker.start()
-        self.start_audio_streaming()
-        await self.async_audio_streaming(async_chunks)
-        self.stop_audio_streaming()
-        if not self.is_interrupted:
-            self.finished_signal.emit(self.audio_path)
-        self.time_worker.stop()
+        logger.info("Playback Stopped")
 
 
 class TTSWorker(AudioPlayWorker):
+    error_signal = pyqtSignal()
+
     def __init__(
         self,
         ref_files: List[str],
@@ -267,6 +276,7 @@ class TTSWorker(AudioPlayWorker):
         self.text = text
         self.api_key = api_key
         self.kwargs = kwargs
+        self.streaming = streaming
 
     def get_pre_files(self):
         return [f for f in self.ref_files if not f.endswith(".lab")]
@@ -316,14 +326,15 @@ class TTSWorker(AudioPlayWorker):
                 },
             )
             response.raise_for_status()
-            self.iterable_chunks = response.iter_content(
-                chunk_size=self.frames_per_buffer
-            )
+            audio_chunks = response.iter_content(chunk_size=self.frames_per_buffer)
+            self.set_chunks(audio_chunks)
             super().run()
         except requests.RequestException as e:
             logger.error(f"Network request failed: {e}")
+            self.error_signal.emit()
         finally:
             self.stop()  # Ensure the thread stops gracefully if there's an error
+            response.close()
 
 
 class AudioRecordWorker(QThread):
@@ -413,3 +424,9 @@ class AsyncTaskWorker(QRunnable):
 
     def run(self):
         self.worker.run()
+
+    def cancel(self):
+        self.worker.cancel()
+
+    def stop(self):
+        self.worker.stop()

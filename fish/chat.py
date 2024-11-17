@@ -485,6 +485,7 @@ class ChatWidget(QWidget):
         self.state = ChatState()
         self.thread_pool = QThreadPool.globalInstance()
         self.loop = asyncio.get_event_loop()
+        self.async_msg_task = None
         self.initUI()
         self.init_messages()
 
@@ -537,10 +538,15 @@ class ChatWidget(QWidget):
         self.clear_button.clicked.connect(self.clear_messages)
         self.clear_button.setStyleSheet(CLEAN_QSS)
 
+        self.stop_button = QPushButton(_t("ChatWidget.stop_btn"))
+        self.stop_button.clicked.connect(self.stop_message_task)
+        self.stop_button.setStyleSheet(CLEAN_QSS)
+
         input_layout.addWidget(self.voice_mode_button)
         input_layout.addWidget(self.input_field)
         input_layout.addWidget(self.send_button)
         input_layout.addWidget(self.clear_button)
+        input_layout.addWidget(self.stop_button)
         main_layout.addLayout(input_layout)
 
         # Add the settings button as an overlay in the top-right corner
@@ -670,10 +676,7 @@ class ChatWidget(QWidget):
         )
         self.scroll_layout.addWidget(bubble)
         QApplication.processEvents()
-        # Drag scroll bar to the bottom
-        self.scroll_area.verticalScrollBar().setValue(
-            self.scroll_area.verticalScrollBar().maximum()
-        )
+
         return bubble
 
     def clear_messages(self):
@@ -715,10 +718,19 @@ class ChatWidget(QWidget):
         message_worker.update_bubble_signal.connect(self.on_update_bubble)
         message_worker.update_duration_signal.connect(self.on_update_duration)
         message_worker.update_text_signal.connect(self.on_update_text)
-
         # worker -> QRunnable -> QThreadPool
-        async_task = AsyncTaskWorker(message_worker)
-        self.thread_pool.start(async_task)
+        self.async_msg_task = AsyncTaskWorker(message_worker)
+        self.thread_pool.start(self.async_msg_task)
+        pass
+
+    def stop_message_task(self):
+        if self.async_msg_task:
+            self.async_msg_task.cancel()
+            self.async_msg_task = None
+
+    def on_message_task_finished(self, audio):
+        self.audio_files.append(audio)
+        logger.info("Message Task Complete")
         pass
 
     def on_add_message(self, text, is_sender, is_voice, audio, duration):
@@ -746,21 +758,24 @@ class ChatWidget(QWidget):
         item: MessageBubble = self.scroll_layout.itemAt(num_bubbles - 1).widget()
         item.update_text(text)
 
-    def on_message_task_finished(self, audio):
-        self.audio_files.append(audio)
-        logger.info("Message Task Complete")
-        pass
-
     def update_bubble_size(self, mode: str = "all"):
         start_idx = self.scroll_layout.count() - 1 if mode == "last" else 0
         for i in range(start_idx, self.scroll_layout.count(), 1):
             item = self.scroll_layout.itemAt(i).widget()
             if isinstance(item, MessageBubble):
                 item.msg.setFixedWidth(item.get_dynamic_width(self.width()))
+        if mode == "last":
+            # Drag scroll bar to the bottom
+            self.scroll_area.verticalScrollBar().setValue(
+                self.scroll_area.verticalScrollBar().maximum()
+            )
         pass
 
     def keyPressEvent(self, event):
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+        if event.modifiers() == Qt.Modifier.CTRL and event.key() == Qt.Key.Key_B:
+            self.stop_message_task()
+            event.accept()
+        elif event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             if self.input_field.hasFocus():
                 self.send_message_text()
             else:
@@ -820,8 +835,9 @@ class MessageWorker(QObject):
         self.system_prompt = system_prompt
         self.system_audios = system_audios
         self.loop = loop
+        self._task = None
 
-    async def send_message_async(self):
+    async def send_message_async(self, cancel_event: asyncio.Event):
         text = self.input_text
         audio = self.input_audio
         agent = self.agent
@@ -875,32 +891,84 @@ class MessageWorker(QObject):
         self.update_bubble_signal.emit("last")
 
         # Step 3: Generate audio and text segments in real-time
-        async def infostream_generator():
+        async def wave_generator(audio_data: bytes, cancel_event: asyncio.Event):
+            chunk_size = 32768  # 32KB = 16K samples = 16384 / 44100 = 0.372 s
+            offset = 0
+
+            while offset + chunk_size <= len(audio_data):
+                # one method to stop async audioplayer is to cut off the wav-stream
+                if cancel_event.is_set():
+                    break
+                yield audio_data[offset : offset + chunk_size]
+                offset += chunk_size
+
+            if cancel_event.is_set():
+                yield b""
+            elif offset < len(audio_data):
+                yield audio_data[offset:]
+
+        async def infostream_generator(cancel_event: asyncio.Event):
             total_seg_time = 0.0
-            yield wav_chunk_header()
-            async for event in agent.stream(
-                chat_ctx={"messages": self.state.conversation}
-            ):
-                if event.type == FishE2EEventType.SPEECH_SEGMENT:
-                    self.state.append_to_chat_ctx(ServeVQPart(codes=event.vq_codes))
-                    total_seg_time += len(event.vq_codes[0]) / 21
-                    yield bytes(event.frame.data)
-                    self.update_duration_signal.emit(total_seg_time)
-                elif event.type == FishE2EEventType.TEXT_SEGMENT:
-                    self.state.append_to_chat_ctx(ServeTextPart(text=event.text))
-                    self.update_text_signal.emit(
-                        self.state.repr_message(self.state.conversation[-1])
-                    )
-                    self.update_bubble_signal.emit("last")
+            yield wav_chunk_header()  # Initial header
+
+            try:
+                async for event in agent.stream(
+                    chat_ctx={"messages": self.state.conversation}
+                ):
+                    if cancel_event.is_set():
+                        break
+
+                    if event.type == FishE2EEventType.SPEECH_SEGMENT:
+                        self.state.append_to_chat_ctx(ServeVQPart(codes=event.vq_codes))
+                        total_seg_time += len(event.vq_codes[0]) / 21
+
+                        audio_data = bytes(event.frame.data)
+                        async for chunk in wave_generator(audio_data, cancel_event):
+                            yield chunk
+
+                        self.update_duration_signal.emit(total_seg_time)
+
+                    elif event.type == FishE2EEventType.TEXT_SEGMENT:
+                        self.state.append_to_chat_ctx(ServeTextPart(text=event.text))
+                        self.update_text_signal.emit(
+                            self.state.repr_message(self.state.conversation[-1])
+                        )
+                        self.update_bubble_signal.emit("last")
+
+            except asyncio.CancelledError:
+                logger.warning("Infostream generator was cancelled.")
+                raise  # Re-raise to assure interruption
 
         # Step 4: Play audio (streaming)
+
         audio_player = AudioPlayWorker(audio_path=temp_wavfile, streaming=True)
-        await audio_player.run_async(infostream_generator())
+        audio_player.set_chunks(infostream_generator(cancel_event))
+        await audio_player.run_async()
         self.finished.emit(temp_wavfile)
 
     def run(self):
         # Run asynchronous tasks in a new event loop using asyncio.run
-        self.loop.run_until_complete(self.send_message_async())
+        self.cancel_event = asyncio.Event()
+        self._task = self.loop.create_task(self.send_message_async(self.cancel_event))
+        self._task.add_done_callback(self.on_task_done)
+        try:
+            self.loop.run_until_complete(self._task)
+        except asyncio.CancelledError:
+            pass  # Don't show redundant error
+
+    def cancel(self):
+        if self._task:
+            self.cancel_event.set()
+            self._task.cancel()
+            self._task = None
+
+    def on_task_done(self, task: asyncio.Task):
+        if task.cancelled():
+            logger.warning("Task was cancelled")
+        elif task.exception():
+            logger.error(f"Task encountered an exception: {task.exception()}")
+        else:
+            logger.info("Task completed successfully")
 
 
 if __name__ == "__main__":

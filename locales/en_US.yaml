@@ -262,4 +262,5 @@ ChatWidget:
   send_btn: "Send"
   clear_confirm: "Are you sure to clear chat history?"
   clear_btn: "Clear"
+  stop_btn: "Stop"
   recording: "Recording: {dur:.1f} s"

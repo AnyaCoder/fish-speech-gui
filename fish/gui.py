@@ -954,6 +954,7 @@ class MainWindow(QMainWindow):
             **kwargs,
         )
         self.tts_worker.finished_signal.connect(self.on_conversion_finished)
+        self.tts_worker.error_signal.connect(self.stop_conversion)
         self.tts_worker.packet_delay.connect(
             lambda t: self.latency_label.setText(
                 _t("action.latency").format(latency=(t * 1000.0))
