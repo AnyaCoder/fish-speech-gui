@@ -664,7 +664,8 @@ class ChatWidget(QWidget):
             self.async_record_runner.cancel()
             self.async_record_runner = None
         logger.info("cancel recording")
-        os.remove(self.temp_wavfile)  # Delete the temporary audio file
+        # os.remove(self.temp_wavfile)  # Delete the temporary audio file
+        self.audio_files.append(self.temp_wavfile)
         self.voice_mode_enabled = False
         self.cancel_button.setVisible(False)  # Hide cancel button
         self.voice_mode_button.setText("🎤")  # Reset the voice mode button
