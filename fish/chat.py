@@ -822,7 +822,7 @@ class ChatWidget(QWidget):
     def closeEvent(self, event):
         # This method is called when the window is closed
         self.on_exit()  # Call the custom exit function
-        event.accept()  # Accept the close event
+        event.accept()
 
     def on_exit(self):
         logger.info("Cleanup actions on exit...")
@@ -832,6 +832,7 @@ class ChatWidget(QWidget):
                 os.remove(file_path)
             except Exception as e:
                 logger.error(f"Failed to delete {file_path}: {e}")
+        self.audio_files.clear()
 
 
 class MessageWorker(AsyncTaskWorker):

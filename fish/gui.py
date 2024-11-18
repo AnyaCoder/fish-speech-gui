@@ -7,7 +7,7 @@ import pkg_resources
 import qdarktheme
 import requests
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtGui import QCloseEvent, QIcon, QPixmap
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -255,9 +255,9 @@ class MainWindow(QMainWindow):
         return tab6
 
     def create_settings_chat(self):
-        chat = ChatWidget()
-        widget_registry.register(chat, "chat")
-        return chat
+        self.chat = ChatWidget()
+        widget_registry.register(self.chat, "chat")
+        return self.chat
 
     def setup_ui_settings(self, layout: QVBoxLayout):
         # we have language and backend settings in the first row
@@ -973,3 +973,15 @@ class MainWindow(QMainWindow):
         self.set_audio(self.audio_path)
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
+
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        self.chat.closeEvent(a0)
+        reply = QMessageBox.question(self, 'Just stay for a while...', 'Are you sure you want to exit?',
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+                                     QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            a0.accept()  # 允许关闭窗口
+            super().closeEvent(a0)
+        else:
+            a0.ignore()  # 忽略关闭事件，窗口不会关闭
+        
