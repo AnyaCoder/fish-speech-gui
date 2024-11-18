@@ -33,7 +33,7 @@ if platform.system() == "Windows":
         "--enable-plugins=pkg-resources",
         "--enable-plugins=pyqt6",
         # --follow-import-to=numpy
-        "--nofollow-import-to=mkl,click,scipy,pandas,matplotlib",
+        "--nofollow-import-to=mkl,click,scipy,pandas,matplotlib,pytest",
         "--include-qt-plugins=sensible,multimedia",
         "--show-memory",
         "--show-progress",

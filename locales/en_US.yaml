@@ -249,6 +249,7 @@ SettingsDialog:
   chat_api_url: "Chat API address"
   decoder_url: "Decoder API address"
   llm_url: "LLM API address"
+  ws_server_uri: "WebSocket Server Uri"
   proxy_url: "Proxy URL(restart needed)"
   sys_prompt: "System Prompt"
   sys_audio: "System Audio"

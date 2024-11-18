@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 import subprocess
@@ -12,11 +13,13 @@ import psutil
 import pyaudio
 import requests
 import sounddevice as sd
-from PyQt6.QtCore import QMutex, QMutexLocker, QRunnable, QThread, pyqtSignal
+from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QRunnable, QThread, pyqtSignal
 
 from fish.config import config
 from fish.services.tts import ServeReferenceAudio, ServeTTSRequest
 from fish.utils.i18n import _t
+
+from .network import WebSocketClient
 
 if os.environ.get("LOGURU", 0) == 0:
     from fish.modules.log import logger
@@ -49,6 +52,51 @@ class BaseWorker(QThread):
         if match:
             return True, match.group(1)
         return False, "0"
+
+
+class AsyncTaskWorker(QObject):
+    def __init__(self, loop: asyncio.AbstractEventLoop):
+        super().__init__()
+        self.loop = loop
+        self._task = None
+        self.cancel_event = asyncio.Event()
+
+    def run(self):
+        self._task = self.loop.create_task(self._execute_task())
+        self._task.add_done_callback(self.on_task_done)
+        try:
+            self.loop.run_until_complete(self._task)
+        except asyncio.CancelledError:
+            pass  # Don't show redundant error
+
+    async def _execute_task(self):
+        raise NotImplementedError("Subclasses should implement this method")
+
+    def cancel(self):
+        if self._task:
+            self.cancel_event.set()
+            self._task.cancel()
+            self._task = None
+
+    def on_task_done(self, task: asyncio.Task):
+        if task.cancelled():
+            logger.warning("Task was cancelled")
+        elif task.exception():
+            logger.error(f"Task encountered an exception: {task.exception()}")
+        else:
+            logger.info("Task completed successfully")
+
+
+class AsyncTaskRunner(QRunnable):
+    def __init__(self, worker: AsyncTaskWorker):
+        super().__init__()
+        self.worker = worker
+
+    def run(self):
+        self.worker.run()
+
+    def cancel(self):
+        self.worker.cancel()
 
 
 class SubprocessWorker(BaseWorker):
@@ -337,31 +385,34 @@ class TTSWorker(AudioPlayWorker):
             response.close()
 
 
-class AudioRecordWorker(QThread):
+class AudioRecordWorker(AsyncTaskWorker):
     audio_data_signal = pyqtSignal(float)
 
     def __init__(
-        self, save_as_file: bool = False, output_file: str = None, parent=None
+        self,
+        loop: asyncio.AbstractEventLoop,
+        save_as_file: bool = False,
+        output_file: str = None,
+        ws_server_uri: str = None,
+        parent=None,
     ):
-        super().__init__(parent)
+        super().__init__(loop)
         self.mutex = QMutex()
-        self.is_running = True
-        self.output_file = output_file
         self.save_as_file = save_as_file
         self.file_initialized = False
+        self.output_file = output_file
+        self.ws_client = WebSocketClient(ws_server_uri) if ws_server_uri else None
+        self.async_queue = asyncio.Queue()
 
-        logger.info(output_file)
-        # self.input_wav = np.zeros(
-        #     (
-        #         config.sample_frames
-        #         + config.fade_frames
-        #         + config.sola_search_frames
-        #         + 2 * config.extra_frames,
-        #     ),
-        #     dtype=np.float32,
-        # )
+    async def _execute_task(self):
+        await self.record_async()
 
-    def run(self):
+    def cancel(self):
+        self.cancel_event.set()
+        self.loop.create_task(self.async_queue.put(None))
+        super().cancel()
+
+    async def record_async(self):
         try:
             # Open the output file once for the duration of recording
             self.f = wave.open(self.output_file, "wb")
@@ -374,6 +425,8 @@ class AudioRecordWorker(QThread):
             self.file_initialized = False
             return  # Stop the thread if initialization fails
 
+        self.start_time = time.time()
+
         with sd.InputStream(
             callback=self.audio_callback,
             channels=1,
@@ -382,26 +435,29 @@ class AudioRecordWorker(QThread):
             blocksize=int(config.sample_frames * 0.1),  # 0.1s
             device=config.input_device,
         ):
-            while self.is_running:
+            if self.ws_client:
+                await self.ws_client.start(self.async_queue)
+
+            while not self.cancel_event.is_set():
                 time.sleep(0.1)
 
         # Close the file once recording is stopped
         self.f.close()
 
-    def stop(self):
-        self.is_running = False
-        self.wait()
-
-    def audio_callback(self, indata: np.ndarray, frames: int, time, status):
+    def audio_callback(self, indata: np.ndarray, frames: int, _time, status):
         if status:
             logger.warning(f"frames: {frames}, status: {status}")
 
         # self.input_wav[:frames] = indata[:, 0]
         audio_bytes = (indata[:, 0] * 32767).astype(np.int16).tobytes()
+
+        self.loop.create_task(self.async_queue.put(audio_bytes))
+
         if self.save_as_file:
             self.save_audio_data(audio_bytes)
-        if self.is_running:
-            self.audio_data_signal.emit(0.1)
+
+        if not self.cancel_event.is_set():
+            self.audio_data_signal.emit(time.time() - self.start_time)
 
     def save_audio_data(self, audio_bytes):
         self.mutex.lock()
@@ -415,18 +471,3 @@ class AudioRecordWorker(QThread):
             logger.error(f"General error saving audio data: {e}")
         finally:
             self.mutex.unlock()
-
-
-class AsyncTaskWorker(QRunnable):
-    def __init__(self, worker):
-        super().__init__()
-        self.worker = worker
-
-    def run(self):
-        self.worker.run()
-
-    def cancel(self):
-        self.worker.cancel()
-
-    def stop(self):
-        self.worker.stop()

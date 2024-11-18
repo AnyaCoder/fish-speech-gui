@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 
 from fish.config import config, save_config
 from fish.modules.worker import (
+    AsyncTaskRunner,
     AsyncTaskWorker,
     AudioPlayWorker,
     AudioRecordWorker,
@@ -51,6 +52,7 @@ class SettingsDialog(QDialog):
         current_decoder_url: str = None,
         current_llm_url: str = None,
         current_proxy_url: str = None,
+        current_ws_server_uri: str = None,
         current_system_prompt: str = None,
         current_system_audios: list = None,
         parent=None,
@@ -64,6 +66,7 @@ class SettingsDialog(QDialog):
         self.decoder_url = current_decoder_url or ""
         self.llm_url = current_llm_url or ""
         self.proxy_url = current_proxy_url or ""
+        self.ws_server_uri = current_ws_server_uri or ""
         self.system_prompt = current_system_prompt or ""
         self.system_audios = current_system_audios or []
 
@@ -79,6 +82,11 @@ class SettingsDialog(QDialog):
         form_layout.addRow(_t("SettingsDialog.llm_url"), self.llm_api_input)
         self.proxy_url_input = QLineEdit(self.proxy_url)
         form_layout.addRow(_t("SettingsDialog.proxy_url"), self.proxy_url_input)
+        self.ws_server_uri_input = QLineEdit(self.ws_server_uri)
+        self.ws_server_uri_input.setPlaceholderText(
+            "Make it empty to disable websocket"
+        )
+        form_layout.addRow(_t("SettingsDialog.ws_server_uri"), self.ws_server_uri_input)
         layout.addLayout(form_layout)
 
         # System Prompt input
@@ -149,6 +157,7 @@ class SettingsDialog(QDialog):
         self.decoder_url = self.vqgan_api_input.text().strip()
         self.llm_url = self.llm_api_input.text().strip()
         self.proxy_url = self.proxy_url_input.text().strip()
+        self.ws_server_uri = self.ws_server_uri_input.text().strip()
         self.system_prompt = self.system_prompt_input.toPlainText().strip()
 
         if (
@@ -469,6 +478,7 @@ QPushButton:hover {
 
 
 class ChatWidget(QWidget):
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle(_t("ChatWidget.title"))
@@ -480,11 +490,14 @@ class ChatWidget(QWidget):
         self.decoder_url = config.decoder_url
         self.llm_url = config.llm_url
         self.proxy_url = config.proxy_url
+        self.ws_server_uri = config.ws_server_uri
         self.system_prompt = config.system_prompt
         self.system_audios = []
         self.state = ChatState()
         self.thread_pool = QThreadPool.globalInstance()
-        self.loop = asyncio.get_event_loop()
+        self.event_loop_message = asyncio.new_event_loop()
+        self.event_loop_record = asyncio.new_event_loop()
+        self.record_duration = 0.0
         self.async_msg_task = None
         self.initUI()
         self.init_messages()
@@ -577,6 +590,7 @@ class ChatWidget(QWidget):
             self.decoder_url,
             self.llm_url,
             self.proxy_url,
+            self.ws_server_uri,
             self.system_prompt,
             self.system_audios,
             self,
@@ -587,6 +601,7 @@ class ChatWidget(QWidget):
             config.decoder_url = self.decoder_url = settings_dialog.decoder_url
             config.system_prompt = self.system_prompt = settings_dialog.system_prompt
             config.proxy_url = self.proxy_url = settings_dialog.proxy_url
+            config.ws_server_uri = self.ws_server_uri = settings_dialog.ws_server_uri
             self.system_audios = settings_dialog.system_audios
             save_config()
             # Close the dialog on save
@@ -615,20 +630,28 @@ class ChatWidget(QWidget):
     def start_recording(self):
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
             self.temp_wavfile = temp_file.name
-        self.audio_worker = AudioRecordWorker(
-            save_as_file=True, output_file=self.temp_wavfile
+
+        audio_recorder = AudioRecordWorker(
+            loop=self.event_loop_record,
+            save_as_file=True,
+            output_file=self.temp_wavfile,
+            ws_server_uri=self.ws_server_uri,
         )
-        self.audio_worker.audio_data_signal.connect(self.on_recording)
-        self.audio_worker.start()
+        audio_recorder.audio_data_signal.connect(self.on_recording)
+
+        self.async_record_runner = AsyncTaskRunner(audio_recorder)
+        self.thread_pool.start(self.async_record_runner)
         logger.info("start recording")
 
         self.input_field.setDisabled(True)
-        self.record_duration = 0
+        self.record_duration = 0.0
         self.input_field.setText(_t("ChatWidget.recording").format(dur=0))
         self.cancel_button.setVisible(True)  # Show the cancel button
 
     def stop_recording(self):
-        self.audio_worker.stop()
+        if self.async_record_runner:
+            self.async_record_runner.cancel()
+            self.async_record_runner = None
         logger.info("stop recording")
         self.audio_files.append(self.temp_wavfile)
         self.start_message_task(audio=self.temp_wavfile)
@@ -637,7 +660,9 @@ class ChatWidget(QWidget):
         self.cancel_button.setVisible(False)  # Hide cancel button
 
     def cancel_recording(self):
-        self.audio_worker.stop()  # Stop the recording
+        if self.async_record_runner:
+            self.async_record_runner.cancel()
+            self.async_record_runner = None
         logger.info("cancel recording")
         os.remove(self.temp_wavfile)  # Delete the temporary audio file
         self.voice_mode_enabled = False
@@ -648,7 +673,7 @@ class ChatWidget(QWidget):
         self.input_field.setText("")
 
     def on_recording(self, elapsed: float):
-        self.record_duration += elapsed
+        self.record_duration = elapsed
         self.input_field.setText(
             _t("ChatWidget.recording").format(dur=self.record_duration)
         )
@@ -710,7 +735,7 @@ class ChatWidget(QWidget):
             decoder_url=self.decoder_url,
             system_prompt=self.system_prompt,
             system_audios=self.system_audios,
-            loop=self.loop,
+            loop=self.event_loop_message,
         )
 
         message_worker.finished.connect(self.on_message_task_finished)
@@ -719,14 +744,15 @@ class ChatWidget(QWidget):
         message_worker.update_duration_signal.connect(self.on_update_duration)
         message_worker.update_text_signal.connect(self.on_update_text)
         # worker -> QRunnable -> QThreadPool
-        self.async_msg_task = AsyncTaskWorker(message_worker)
-        self.thread_pool.start(self.async_msg_task)
+        self.async_msg_runner = AsyncTaskRunner(message_worker)
+        logger.info("start async message runner")
+        self.thread_pool.start(self.async_msg_runner)
         pass
 
     def stop_message_task(self):
-        if self.async_msg_task:
-            self.async_msg_task.cancel()
-            self.async_msg_task = None
+        if self.async_msg_runner:
+            self.async_msg_runner.cancel()
+            self.async_msg_runner = None
 
     def on_message_task_finished(self, audio):
         self.audio_files.append(audio)
@@ -740,7 +766,7 @@ class ChatWidget(QWidget):
             is_voice=is_voice,
             is_voice_clickable=is_voice,
             audio_file=audio,
-            voice_duration=duration,
+            voice_duration=self.record_duration if is_sender else duration,
         )
 
     def on_update_bubble(self, mode):
@@ -807,7 +833,7 @@ class ChatWidget(QWidget):
                 logger.error(f"Failed to delete {file_path}: {e}")
 
 
-class MessageWorker(QObject):
+class MessageWorker(AsyncTaskWorker):
     finished = pyqtSignal(str)  # tmp audio
     add_message_signal = pyqtSignal(
         str, bool, bool, str, float
@@ -827,15 +853,13 @@ class MessageWorker(QObject):
         system_audios: list,
         loop: asyncio.AbstractEventLoop,
     ):
-        super().__init__()
+        super().__init__(loop)
         self.input_text = input_text
         self.input_audio = input_audio
         self.state = state
         self.agent = FishE2EAgent(llm_url, decoder_url)
         self.system_prompt = system_prompt
         self.system_audios = system_audios
-        self.loop = loop
-        self._task = None
 
     async def send_message_async(self, cancel_event: asyncio.Event):
         text = self.input_text
@@ -946,29 +970,8 @@ class MessageWorker(QObject):
         await audio_player.run_async()
         self.finished.emit(temp_wavfile)
 
-    def run(self):
-        # Run asynchronous tasks in a new event loop using asyncio.run
-        self.cancel_event = asyncio.Event()
-        self._task = self.loop.create_task(self.send_message_async(self.cancel_event))
-        self._task.add_done_callback(self.on_task_done)
-        try:
-            self.loop.run_until_complete(self._task)
-        except asyncio.CancelledError:
-            pass  # Don't show redundant error
-
-    def cancel(self):
-        if self._task:
-            self.cancel_event.set()
-            self._task.cancel()
-            self._task = None
-
-    def on_task_done(self, task: asyncio.Task):
-        if task.cancelled():
-            logger.warning("Task was cancelled")
-        elif task.exception():
-            logger.error(f"Task encountered an exception: {task.exception()}")
-        else:
-            logger.info("Task completed successfully")
+    async def _execute_task(self):
+        await self.send_message_async(self.cancel_event)
 
 
 if __name__ == "__main__":
