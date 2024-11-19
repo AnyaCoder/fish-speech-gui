@@ -1,4 +1,5 @@
 import asyncio
+import io
 import os
 import re
 import subprocess
@@ -63,7 +64,7 @@ class AsyncTaskWorker(QObject):
 
     def run(self):
         self._task = self.loop.create_task(self._execute_task())
-        self._task.add_done_callback(self.on_task_done)
+        self._task.add_done_callback(self._on_task_done)
         try:
             self.loop.run_until_complete(self._task)
         except asyncio.CancelledError:
@@ -78,7 +79,7 @@ class AsyncTaskWorker(QObject):
             self._task.cancel()
             self._task = None
 
-    def on_task_done(self, task: asyncio.Task):
+    def _on_task_done(self, task: asyncio.Task):
         if task.cancelled():
             logger.warning("Task was cancelled")
         elif task.exception():
@@ -207,13 +208,13 @@ class AudioPlayWorker(QThread):
         self.stream = None
 
         self.time_worker = TimeWorker(pause_time=0.1)
-        self.time_worker.time_signal.connect(self.calc_elapsed)
+        self.time_worker.time_signal.connect(self._calc_elapsed)
 
-    def calc_elapsed(self, elapsed):
+    def _calc_elapsed(self, elapsed):
         self.elapsed = elapsed
         self.packet_delay.emit(elapsed)
 
-    def initialize_audio_stream(self):
+    def _initialize_audio_stream(self):
         p = pyaudio.PyAudio()
         stream = p.open(
             format=pyaudio.paInt16,
@@ -226,7 +227,7 @@ class AudioPlayWorker(QThread):
 
     def start_audio_streaming(self):
         if self.streaming:
-            self.p, self.stream = self.initialize_audio_stream()
+            self.p, self.stream = self._initialize_audio_stream()
             self.f = wave.open(self.audio_path, "wb")
             self.f.setnchannels(1)
             self.f.setsampwidth(2)
@@ -326,17 +327,17 @@ class TTSWorker(AudioPlayWorker):
         self.kwargs = kwargs
         self.streaming = streaming
 
-    def get_pre_files(self):
+    def _get_pre_files(self):
         return [f for f in self.ref_files if not f.endswith(".lab")]
 
-    def filter_audio_files(self, pre_files: List[str]):
+    def _filter_audio_files(self, pre_files: List[str]):
         return [
             f
             for f in pre_files
             if Path(f).exists() and Path(f).with_suffix(".lab").exists()
         ]
 
-    def create_tts_request(self, audio_files: List[str]):
+    def _create_tts_request(self, audio_files: List[str]):
         return ServeTTSRequest(
             text=self.text,
             references=[
@@ -358,9 +359,9 @@ class TTSWorker(AudioPlayWorker):
         )
 
     def run(self):
-        pre_files = self.get_pre_files()
-        audio_files = self.filter_audio_files(pre_files)
-        request = self.create_tts_request(audio_files)
+        pre_files = self._get_pre_files()
+        audio_files = self._filter_audio_files(pre_files)
+        request = self._create_tts_request(audio_files)
 
         try:
             self.time_worker.start()
@@ -399,75 +400,108 @@ class AudioRecordWorker(AsyncTaskWorker):
         super().__init__(loop)
         self.mutex = QMutex()
         self.save_as_file = save_as_file
-        self.file_initialized = False
         self.output_file = output_file
-        self.ws_client = WebSocketClient(ws_server_uri) if ws_server_uri else None
-        self.async_queue = asyncio.Queue()
+        self.ws_client = WebSocketClient(ws_server_uri, loop) if ws_server_uri else None
+        self.audio_data_buffer = io.BytesIO() if not self.output_file else None
+        self.max_buffer_duration = 1
+        self.sample_rate = config.sample_rate
+        self.produce_loop = loop
+        self.consume_loop = loop
+        self.stop_data_event = asyncio.Event()
 
     async def _execute_task(self):
-        await self.record_async()
+        await self._record_async()
+        while not self.cancel_event.is_set():
+            await asyncio.sleep(0.1)
 
     def cancel(self):
-        self.cancel_event.set()
-        self.loop.create_task(self.async_queue.put(None))
+        if self.ws_client:
+            close_task = self.consume_loop.create_task(
+                self._wait_for_data_consumption_and_close()
+            )
+            self.consume_loop.create_task(
+                self._wait_for_ws_close_and_cancel(close_task)
+            )
+        else:
+            super().cancel()
+
+    async def _wait_for_data_consumption_and_close(self):
+        if self.ws_client:
+            self.stop_data_event.set()
+            while not self.ws_client.async_queue.empty():
+                logger.info(
+                    f"Waiting for {self.ws_client.async_queue.qsize()} items..."
+                )
+                await asyncio.sleep(0.1)
+            await self.ws_client.close()
+        else:
+            logger.warning("No WebSocket client to close.")
+
+    async def _wait_for_ws_close_and_cancel(self, close_task):
+        await close_task
         super().cancel()
 
-    async def record_async(self):
+    async def _record_async(self):
         try:
-            # Open the output file once for the duration of recording
+            self._initialize_file_or_buffer()
+            self.start_time = time.time()
+
+            with sd.InputStream(
+                callback=self._audio_callback,
+                channels=1,
+                samplerate=self.sample_rate,
+                dtype="float32",
+                blocksize=int(config.sample_frames * 0.1),
+                device=config.input_device,
+            ):
+                if self.ws_client:
+                    await self.ws_client.start()
+                    self.consume_loop.create_task(self.ws_client.consume_data())
+
+                await self._record_audio()
+
+        except Exception as e:
+            logger.error(f"Audio recording initialization failed: {e}")
+        finally:
+            if self.output_file and hasattr(self, "f"):
+                self.f.close()
+
+    def _initialize_file_or_buffer(self):
+        if self.output_file:
             self.f = wave.open(self.output_file, "wb")
             self.f.setnchannels(1)
-            self.f.setsampwidth(2)  # 2 bytes for 16-bit audio
-            self.f.setframerate(config.sample_rate)
-            self.file_initialized = True
-        except Exception as e:
-            logger.error(f"Audio recording initialize failed!: {e}")
-            self.file_initialized = False
-            return  # Stop the thread if initialization fails
+            self.f.setsampwidth(2)
+            self.f.setframerate(self.sample_rate)
+        else:
+            self.audio_data_buffer.seek(0)
 
-        self.start_time = time.time()
+    async def _record_audio(self):
+        """Main loop for audio recording."""
+        while not self.stop_data_event.is_set():
+            await asyncio.sleep(0.1)
 
-        with sd.InputStream(
-            callback=self.audio_callback,
-            channels=1,
-            samplerate=config.sample_rate,
-            dtype="float32",
-            blocksize=int(config.sample_frames * 0.1),  # 0.1s
-            device=config.input_device,
-        ):
-            if self.ws_client:
-                await self.ws_client.start(self.async_queue)
-
-            while not self.cancel_event.is_set():
-                time.sleep(0.1)
-
-        # Close the file once recording is stopped
-        self.f.close()
-
-    def audio_callback(self, indata: np.ndarray, frames: int, _time, status):
+    def _audio_callback(self, indata: np.ndarray, frames: int, _time, status):
         if status:
-            logger.warning(f"frames: {frames}, status: {status}")
+            logger.warning(f"Audio input error: {status}")
 
-        # self.input_wav[:frames] = indata[:, 0]
         audio_bytes = (indata[:, 0] * 32767).astype(np.int16).tobytes()
 
-        self.loop.create_task(self.async_queue.put(audio_bytes))
-
         if self.save_as_file:
-            self.save_audio_data(audio_bytes)
+            self._save_audio_data(audio_bytes)
 
         if not self.cancel_event.is_set():
             self.audio_data_signal.emit(time.time() - self.start_time)
 
-    def save_audio_data(self, audio_bytes):
-        self.mutex.lock()
-        try:
-            if self.file_initialized:
-                # logger.info(f"write: {len(audio_bytes)}")
+        if not self.output_file:
+            self._manage_audio_buffer(audio_bytes)
+
+    def _manage_audio_buffer(self, audio_bytes):
+        """Safely manage the audio buffer and produce data."""
+        with QMutexLocker(self.mutex):
+            self.produce_loop.create_task(self.ws_client.async_queue.put(audio_bytes))
+
+    def _save_audio_data(self, audio_bytes):
+        """Save audio data to the file safely."""
+        with QMutexLocker(self.mutex):
+            if self.output_file:
                 self.f.writeframesraw(audio_bytes)
-        except IOError as e:
-            logger.error(f"IO error saving audio data: {e}")
-        except Exception as e:
-            logger.error(f"General error saving audio data: {e}")
-        finally:
-            self.mutex.unlock()

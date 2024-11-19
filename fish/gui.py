@@ -976,12 +976,15 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, a0: QCloseEvent) -> None:
         self.chat.closeEvent(a0)
-        reply = QMessageBox.question(self, 'Just stay for a while...', 'Are you sure you want to exit?',
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
-                                     QMessageBox.StandardButton.No)
+        reply = QMessageBox.question(
+            self,
+            "Just stay for a while...",
+            "Are you sure you want to exit?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
         if reply == QMessageBox.StandardButton.Yes:
             a0.accept()  # 允许关闭窗口
             super().closeEvent(a0)
         else:
             a0.ignore()  # 忽略关闭事件，窗口不会关闭
-        

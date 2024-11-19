@@ -10,6 +10,7 @@ from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
     QApplication,
+    QComboBox,
     QDialog,
     QFileDialog,
     QFormLayout,
@@ -53,6 +54,7 @@ class SettingsDialog(QDialog):
         current_llm_url: str = None,
         current_proxy_url: str = None,
         current_ws_server_uri: str = None,
+        current_mic_setting: str = None,
         current_system_prompt: str = None,
         current_system_audios: list = None,
         parent=None,
@@ -60,13 +62,14 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(_t("SettingsDialog.title"))
         self.setModal(True)
-        self.setMinimumSize(400, 200)
+        self.setMinimumSize(500, 200)
 
         # Set the current API URL and System Prompt if passed
         self.decoder_url = current_decoder_url or ""
         self.llm_url = current_llm_url or ""
         self.proxy_url = current_proxy_url or ""
         self.ws_server_uri = current_ws_server_uri or ""
+        self.mic_setting = current_mic_setting or ""
         self.system_prompt = current_system_prompt or ""
         self.system_audios = current_system_audios or []
 
@@ -87,6 +90,24 @@ class SettingsDialog(QDialog):
             "Make it empty to disable websocket"
         )
         form_layout.addRow(_t("SettingsDialog.ws_server_uri"), self.ws_server_uri_input)
+
+        self.mic_setting_combo = QComboBox()
+        self.mic_setting_combo.addItem(_t("SettingsDialog.mic.constant"), "constant")
+        self.mic_setting_combo.addItem(_t("SettingsDialog.mic.manual"), "manual")
+        for i in range(self.mic_setting_combo.count()):
+            if self.mic_setting_combo.itemData(i) == config.mic_setting:
+                self.mic_setting_combo.setCurrentIndex(i)
+                break
+        else:
+            # not found, use default
+            self.mic_setting_combo.setCurrentIndex(0)
+            self.mic_setting = self.mic_setting_combo.itemData(0)
+
+        def helper(index):
+            self.mic_setting = self.mic_setting_combo.itemData(index)
+
+        self.mic_setting_combo.currentIndexChanged.connect(helper)
+        form_layout.addRow(_t("SettingsDialog.mic.setting"), self.mic_setting_combo)
         layout.addLayout(form_layout)
 
         # System Prompt input
@@ -492,6 +513,7 @@ class ChatWidget(QWidget):
         self.proxy_url = config.proxy_url
         self.ws_server_uri = config.ws_server_uri
         self.system_prompt = config.system_prompt
+        self.mic_setting = config.mic_setting
         self.system_audios = []
         self.state = ChatState()
         self.thread_pool = QThreadPool.globalInstance()
@@ -509,9 +531,38 @@ class ChatWidget(QWidget):
             2
         )  # Main layout spacing, contains scroller and input widgets
 
-        self.top_blank_area = QWidget()
-        self.top_blank_area.setFixedHeight(50)
-        main_layout.addWidget(self.top_blank_area)
+        self.top_bar = QWidget()
+        self.top_bar.setFixedHeight(50)
+
+        top_bar_layout = QHBoxLayout()
+        top_bar_layout.setContentsMargins(5, 0, 5, 0)
+        top_bar_layout.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )  # Center the contents horizontally
+
+        self.chat_mode_label = QLabel(_t("ChatWidget.chat_mode"))
+        self.chat_mode_combo = QComboBox()
+        self.chat_mode_combo.addItem(_t("ChatWidget.agent"), "Agent")
+        self.chat_mode_combo.addItem(_t("ChatWidget.llm_decode"), "ASR+LLM+decoder")
+        # Add the settings button as an overlay in the top-right corner
+        self.settings_button = QPushButton("⚙️")
+        # self.settings_button.setStyleSheet("background: transparent; border: none;")
+        self.settings_button.setFixedSize(32, 32)  # Adjust size as needed
+        self.settings_button.clicked.connect(self.open_settings)
+        # Add the history button next to the settings button
+        self.history_button = QPushButton(
+            "📜"
+        )  # A scroll icon or text to represent history
+        self.history_button.setFixedSize(32, 32)
+        self.history_button.clicked.connect(self.open_chat_history)
+
+        top_bar_layout.addWidget(self.chat_mode_label)
+        top_bar_layout.addWidget(self.chat_mode_combo)
+        # top_bar_layout.addStretch()  # Add stretch to push buttons to the right
+        top_bar_layout.addWidget(self.history_button)
+        top_bar_layout.addWidget(self.settings_button)
+        self.top_bar.setLayout(top_bar_layout)
+        main_layout.addWidget(self.top_bar)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -562,35 +613,15 @@ class ChatWidget(QWidget):
         input_layout.addWidget(self.stop_button)
         main_layout.addLayout(input_layout)
 
-        # Add the settings button as an overlay in the top-right corner
-        self.settings_button = QPushButton("⚙️")
-        # self.settings_button.setStyleSheet("background: transparent; border: none;")
-        self.settings_button.setFixedSize(32, 32)  # Adjust size as needed
-        self.settings_button.clicked.connect(self.open_settings)
-        # Position the settings button at the top-right corner as an overlay
-        self.settings_button.setParent(self)
-        self.settings_button.move(
-            self.width() // 2 - 40, 10
-        )  # Position with padding from the edge
-
-        # Add the history button next to the settings button
-        self.history_button = QPushButton(
-            "📜"
-        )  # A scroll icon or text to represent history
-        self.history_button.setFixedSize(32, 32)
-        self.history_button.clicked.connect(self.open_chat_history)
-        self.history_button.setParent(self)
-        self.history_button.move(
-            self.width() // 2, 10
-        )  # Positioned to the left of settings button
-
     def open_settings(self):
         # Open the settings dialog
+
         settings_dialog = SettingsDialog(
             self.decoder_url,
             self.llm_url,
             self.proxy_url,
             self.ws_server_uri,
+            self.mic_setting,
             self.system_prompt,
             self.system_audios,
             self,
@@ -602,6 +633,7 @@ class ChatWidget(QWidget):
             config.system_prompt = self.system_prompt = settings_dialog.system_prompt
             config.proxy_url = self.proxy_url = settings_dialog.proxy_url
             config.ws_server_uri = self.ws_server_uri = settings_dialog.ws_server_uri
+            config.mic_setting = self.mic_setting = settings_dialog.mic_setting
             self.system_audios = settings_dialog.system_audios
             save_config()
             # Close the dialog on save
@@ -630,13 +662,20 @@ class ChatWidget(QWidget):
     def start_recording(self):
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
             self.temp_wavfile = temp_file.name
+        logger.info(f"self.mic_setting: {self.mic_setting}")
+        if self.mic_setting == "manual":
+            audio_recorder = AudioRecordWorker(
+                loop=self.event_loop_record,
+                save_as_file=True,
+                output_file=self.temp_wavfile,
+            )
+        else:
+            audio_recorder = AudioRecordWorker(
+                loop=self.event_loop_record,
+                save_as_file=False,
+                ws_server_uri=self.ws_server_uri,
+            )
 
-        audio_recorder = AudioRecordWorker(
-            loop=self.event_loop_record,
-            save_as_file=True,
-            output_file=self.temp_wavfile,
-            ws_server_uri=self.ws_server_uri,
-        )
         audio_recorder.audio_data_signal.connect(self.on_recording)
 
         self.async_record_runner = AsyncTaskRunner(audio_recorder)
@@ -653,8 +692,9 @@ class ChatWidget(QWidget):
             self.async_record_runner.cancel()
             self.async_record_runner = None
         logger.info("stop recording")
-        self.audio_files.append(self.temp_wavfile)
-        self.start_message_task(audio=self.temp_wavfile)
+        if self.mic_setting == "manual":
+            self.audio_files.append(self.temp_wavfile)
+            self.start_message_task(audio=self.temp_wavfile)
         self.input_field.setDisabled(False)
         self.input_field.setText("")
         self.cancel_button.setVisible(False)  # Hide cancel button
@@ -863,7 +903,7 @@ class MessageWorker(AsyncTaskWorker):
         self.system_prompt = system_prompt
         self.system_audios = system_audios
 
-    async def send_message_async(self, cancel_event: asyncio.Event):
+    async def send_message_async(self):
         text = self.input_text
         audio = self.input_audio
         agent = self.agent
@@ -917,23 +957,23 @@ class MessageWorker(AsyncTaskWorker):
         self.update_bubble_signal.emit("last")
 
         # Step 3: Generate audio and text segments in real-time
-        async def wave_generator(audio_data: bytes, cancel_event: asyncio.Event):
+        async def wave_generator(audio_data: bytes):
             chunk_size = 32768  # 32KB = 16K samples = 16384 / 44100 = 0.372 s
             offset = 0
 
             while offset + chunk_size <= len(audio_data):
                 # one method to stop async audioplayer is to cut off the wav-stream
-                if cancel_event.is_set():
+                if self.cancel_event.is_set():
                     break
                 yield audio_data[offset : offset + chunk_size]
                 offset += chunk_size
 
-            if cancel_event.is_set():
+            if self.cancel_event.is_set():
                 yield b""
             elif offset < len(audio_data):
                 yield audio_data[offset:]
 
-        async def infostream_generator(cancel_event: asyncio.Event):
+        async def infostream_generator():
             total_seg_time = 0.0
             yield wav_chunk_header()  # Initial header
 
@@ -941,7 +981,7 @@ class MessageWorker(AsyncTaskWorker):
                 async for event in agent.stream(
                     chat_ctx={"messages": self.state.conversation}
                 ):
-                    if cancel_event.is_set():
+                    if self.cancel_event.is_set():
                         break
 
                     if event.type == FishE2EEventType.SPEECH_SEGMENT:
@@ -949,7 +989,7 @@ class MessageWorker(AsyncTaskWorker):
                         total_seg_time += len(event.vq_codes[0]) / 21
 
                         audio_data = bytes(event.frame.data)
-                        async for chunk in wave_generator(audio_data, cancel_event):
+                        async for chunk in wave_generator(audio_data):
                             yield chunk
 
                         self.update_duration_signal.emit(total_seg_time)
@@ -968,12 +1008,12 @@ class MessageWorker(AsyncTaskWorker):
         # Step 4: Play audio (streaming)
 
         audio_player = AudioPlayWorker(audio_path=temp_wavfile, streaming=True)
-        audio_player.set_chunks(infostream_generator(cancel_event))
+        audio_player.set_chunks(infostream_generator())
         await audio_player.run_async()
         self.finished.emit(temp_wavfile)
 
     async def _execute_task(self):
-        await self.send_message_async(self.cancel_event)
+        await self.send_message_async()
 
 
 if __name__ == "__main__":

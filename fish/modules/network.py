@@ -6,9 +6,11 @@ from .log import logger
 
 
 class WebSocketClient:
-    def __init__(self, server_uri: str):
+    def __init__(self, server_uri: str, loop: asyncio.AbstractEventLoop):
         self.server_uri = server_uri
-        self.websocket = None  # WebSocket connection object
+        self.websocket = None
+        self.async_queue = asyncio.Queue(maxsize=100)
+        self.loop = loop
 
     async def connect(self):
         self.websocket = await websockets.connect(self.server_uri)
@@ -16,8 +18,13 @@ class WebSocketClient:
 
     async def send_data(self, data: bytes):
         if self.websocket:
-            await self.websocket.send(data)
-            logger.info(f"Sent {len(data)} bytes of data to server.")
+            try:
+                await self.websocket.send(data)
+                # logger.info(f"Sent {len(data)} bytes of data to server.")
+            except websockets.exceptions.ConnectionClosedOK:
+                pass
+            except Exception as e:
+                logger.error(f"Error sending data: {e}")
         else:
             logger.warning("WebSocket connection is not established.")
 
@@ -28,20 +35,15 @@ class WebSocketClient:
         else:
             logger.warning("WebSocket connection is not established.")
 
-    async def consume_data(self, queue: asyncio.Queue):
+    async def consume_data(self):
+        # logger.warning(f"consume: {self.async_queue.qsize()}")
         while True:
-            data = (
-                await queue.get()
-            )  # Block and wait for data to be available in the queue
-            if data is None:  # A 'None' value is used as a termination signal
+            data = await self.async_queue.get()
+            if data is None:
+                logger.info("Received None, stop consuming...")
                 break
-            await self.send_data(data)
+            else:
+                await self.send_data(data)
 
-    async def start(self, queue: asyncio.Queue):
+    async def start(self):
         await self.connect()
-        try:
-            await self.consume_data(queue)
-        except asyncio.CancelledError:
-            logger.warning("Data sending was cancelled.")
-        finally:
-            await self.close()

@@ -26,6 +26,7 @@ class Config:
     llm_url: str = "http://localhost:8080/v1/chat"
     proxy_url: str = "http://127.0.0.1:7890"
     ws_server_uri: str = ""
+    mic_setting: str = "manual"
 
     system_prompt: str = (
         'You are a voice assistant created by Fish Audio, offering end-to-end\

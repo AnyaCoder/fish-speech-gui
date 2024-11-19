@@ -255,6 +255,10 @@ SettingsDialog:
   sys_audio: "System Audio"
   save_btn: "Save"
   cancel_btn: "Cancel"
+  mic:
+    setting: "Microphone Setting"
+    constant: "Always recording"
+    manual: "Manual stop recording"
 
 ChatWidget:
   title: "LINE Chat Simulator"
@@ -264,4 +268,7 @@ ChatWidget:
   clear_confirm: "Are you sure to clear chat history?"
   clear_btn: "Clear"
   stop_btn: "Stop"
+  chat_mode: "Chat Mode"
+  agent: "Agent"
+  llm_decode: "ASR+LLM+decoder"
   recording: "Recording: {dur:.1f} s"
