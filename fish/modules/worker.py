@@ -56,6 +56,8 @@ class BaseWorker(QThread):
 
 
 class AsyncTaskWorker(QObject):
+    finish_signal = pyqtSignal()
+
     def __init__(self, loop: asyncio.AbstractEventLoop):
         super().__init__()
         self.loop = loop
@@ -80,6 +82,7 @@ class AsyncTaskWorker(QObject):
             self._task = None
 
     def _on_task_done(self, task: asyncio.Task):
+        self.finish_signal.emit()
         if task.cancelled():
             logger.warning("Task was cancelled")
         elif task.exception():

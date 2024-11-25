@@ -16,7 +16,7 @@ class WebSocketClient:
         self.websocket = await websockets.connect(self.server_uri)
         logger.info(f"Connected to server at {self.server_uri}")
 
-    async def send_data(self, data: bytes):
+    async def send_data(self, data: bytes | str):
         if self.websocket:
             try:
                 await self.websocket.send(data)

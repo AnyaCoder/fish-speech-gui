@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 )
 
 from fish.config import config, save_config
+from fish.modules.network import WebSocketClient
 from fish.modules.worker import (
     AsyncTaskRunner,
     AsyncTaskWorker,
@@ -53,7 +54,8 @@ class SettingsDialog(QDialog):
         current_decoder_url: str = None,
         current_llm_url: str = None,
         current_proxy_url: str = None,
-        current_ws_server_uri: str = None,
+        current_voice_ws_uri: str = None,
+        current_text_ws_uri: str = None,
         current_mic_setting: str = None,
         current_system_prompt: str = None,
         current_system_audios: list = None,
@@ -68,11 +70,11 @@ class SettingsDialog(QDialog):
         self.decoder_url = current_decoder_url or ""
         self.llm_url = current_llm_url or ""
         self.proxy_url = current_proxy_url or ""
-        self.ws_server_uri = current_ws_server_uri or ""
+        self.voice_ws_uri = current_voice_ws_uri or ""
+        self.text_ws_uri = current_text_ws_uri or ""
         self.mic_setting = current_mic_setting or ""
         self.system_prompt = current_system_prompt or ""
         self.system_audios = current_system_audios or []
-
         layout = QVBoxLayout()
 
         # Create a form layout for the input fields
@@ -85,12 +87,16 @@ class SettingsDialog(QDialog):
         form_layout.addRow(_t("SettingsDialog.llm_url"), self.llm_api_input)
         self.proxy_url_input = QLineEdit(self.proxy_url)
         form_layout.addRow(_t("SettingsDialog.proxy_url"), self.proxy_url_input)
-        self.ws_server_uri_input = QLineEdit(self.ws_server_uri)
-        self.ws_server_uri_input.setPlaceholderText(
+        self.voice_ws_uri_input = QLineEdit(self.voice_ws_uri)
+        self.voice_ws_uri_input.setPlaceholderText(
             "Make it empty to disable websocket"
         )
-        form_layout.addRow(_t("SettingsDialog.ws_server_uri"), self.ws_server_uri_input)
-
+        self.text_ws_uri_input = QLineEdit(self.text_ws_uri)
+        self.text_ws_uri_input.setPlaceholderText(
+            "Make it empty to disable websocket"
+        )
+        form_layout.addRow(_t("SettingsDialog.voice_ws_uri"), self.voice_ws_uri_input)
+        form_layout.addRow(_t("SettingsDialog.text_ws_uri"), self.text_ws_uri_input)
         self.mic_setting_combo = QComboBox()
         self.mic_setting_combo.addItem(_t("SettingsDialog.mic.constant"), "constant")
         self.mic_setting_combo.addItem(_t("SettingsDialog.mic.manual"), "manual")
@@ -178,7 +184,8 @@ class SettingsDialog(QDialog):
         self.decoder_url = self.vqgan_api_input.text().strip()
         self.llm_url = self.llm_api_input.text().strip()
         self.proxy_url = self.proxy_url_input.text().strip()
-        self.ws_server_uri = self.ws_server_uri_input.text().strip()
+        self.voice_ws_uri = self.voice_ws_uri_input.text().strip()
+        self.text_ws_uri = self.text_ws_uri_input.text().strip()
         self.system_prompt = self.system_prompt_input.toPlainText().strip()
 
         if (
@@ -511,9 +518,11 @@ class ChatWidget(QWidget):
         self.decoder_url = config.decoder_url
         self.llm_url = config.llm_url
         self.proxy_url = config.proxy_url
-        self.ws_server_uri = config.ws_server_uri
+        self.voice_ws_uri = config.voice_ws_uri
+        self.text_ws_uri = config.text_ws_uri
         self.system_prompt = config.system_prompt
         self.mic_setting = config.mic_setting
+        self.chat_mode = config.chat_mode
         self.system_audios = []
         self.state = ChatState()
         self.thread_pool = QThreadPool.globalInstance()
@@ -544,6 +553,15 @@ class ChatWidget(QWidget):
         self.chat_mode_combo = QComboBox()
         self.chat_mode_combo.addItem(_t("ChatWidget.agent"), "Agent")
         self.chat_mode_combo.addItem(_t("ChatWidget.llm_decode"), "ASR+LLM+decoder")
+        for i in range(self.chat_mode_combo.count()):
+            if self.chat_mode_combo.itemData(i) == config.chat_mode:
+                self.chat_mode_combo.setCurrentIndex(i)
+                break
+        else:
+            # not found, use default
+            self.chat_mode_combo.setCurrentIndex(0)
+            self.mic_setting = self.chat_mode_combo.itemData(0)
+
         # Add the settings button as an overlay in the top-right corner
         self.settings_button = QPushButton("⚙️")
         # self.settings_button.setStyleSheet("background: transparent; border: none;")
@@ -620,7 +638,8 @@ class ChatWidget(QWidget):
             self.decoder_url,
             self.llm_url,
             self.proxy_url,
-            self.ws_server_uri,
+            self.voice_ws_uri,
+            self.text_ws_uri,
             self.mic_setting,
             self.system_prompt,
             self.system_audios,
@@ -632,7 +651,8 @@ class ChatWidget(QWidget):
             config.decoder_url = self.decoder_url = settings_dialog.decoder_url
             config.system_prompt = self.system_prompt = settings_dialog.system_prompt
             config.proxy_url = self.proxy_url = settings_dialog.proxy_url
-            config.ws_server_uri = self.ws_server_uri = settings_dialog.ws_server_uri
+            config.voice_ws_uri = self.voice_ws_uri = settings_dialog.voice_ws_uri
+            config.text_ws_uri = self.text_ws_uri = settings_dialog.text_ws_uri
             config.mic_setting = self.mic_setting = settings_dialog.mic_setting
             self.system_audios = settings_dialog.system_audios
             save_config()
@@ -669,22 +689,26 @@ class ChatWidget(QWidget):
                 save_as_file=True,
                 output_file=self.temp_wavfile,
             )
+            self.input_field.setDisabled(True)
         else:
             audio_recorder = AudioRecordWorker(
                 loop=self.event_loop_record,
                 save_as_file=False,
-                ws_server_uri=self.ws_server_uri,
+                ws_server_uri=self.voice_ws_uri,
             )
+            self.input_field.setDisabled(False)
 
         audio_recorder.audio_data_signal.connect(self.on_recording)
-
+        audio_recorder.finish_signal.connect(self.after_recording)
         self.async_record_runner = AsyncTaskRunner(audio_recorder)
         self.thread_pool.start(self.async_record_runner)
         logger.info("start recording")
 
-        self.input_field.setDisabled(True)
         self.record_duration = 0.0
-        self.input_field.setText(_t("ChatWidget.recording").format(dur=0))
+        if self.mic_setting == "manual":
+            self.input_field.setText(_t("ChatWidget.recording").format(dur=0))
+        else:
+            self.cancel_button.setText("Cancel:" + f"{self.record_duration:.2f}s")
         self.cancel_button.setVisible(True)  # Show the cancel button
 
     def stop_recording(self):
@@ -695,9 +719,6 @@ class ChatWidget(QWidget):
         if self.mic_setting == "manual":
             self.audio_files.append(self.temp_wavfile)
             self.start_message_task(audio=self.temp_wavfile)
-        self.input_field.setDisabled(False)
-        self.input_field.setText("")
-        self.cancel_button.setVisible(False)  # Hide cancel button
 
     def cancel_recording(self):
         if self.async_record_runner:
@@ -707,17 +728,25 @@ class ChatWidget(QWidget):
         # os.remove(self.temp_wavfile)  # Delete the temporary audio file
         self.audio_files.append(self.temp_wavfile)
         self.voice_mode_enabled = False
-        self.cancel_button.setVisible(False)  # Hide cancel button
+        
         self.voice_mode_button.setText("🎤")  # Reset the voice mode button
         self.voice_mode_button.setStyleSheet(RECORD_START_QSS)  # Reset record QSS
+
+    def after_recording(self):
         self.input_field.setDisabled(False)
         self.input_field.setText("")
+        self.cancel_button.setVisible(False)  # Hide cancel button
 
     def on_recording(self, elapsed: float):
         self.record_duration = elapsed
-        self.input_field.setText(
-            _t("ChatWidget.recording").format(dur=self.record_duration)
-        )
+        if self.mic_setting == "manual":
+            self.input_field.setText(
+                _t("ChatWidget.recording").format(dur=self.record_duration)
+            )
+        else:
+            self.cancel_button.setText(
+                "Cancel:" + f"{self.record_duration:.2f}s"
+            )
         pass
 
     def init_messages(self):
@@ -768,26 +797,35 @@ class ChatWidget(QWidget):
             self.start_message_task(text=text)
 
     def start_message_task(self, *, text: str = None, audio: str = None):
-        message_worker = MessageWorker(
-            input_text=text,
-            input_audio=audio,
-            state=self.state,
-            llm_url=self.llm_url,
-            decoder_url=self.decoder_url,
-            system_prompt=self.system_prompt,
-            system_audios=self.system_audios,
-            loop=self.event_loop_message,
-        )
-
-        message_worker.finished.connect(self.on_message_task_finished)
-        message_worker.add_message_signal.connect(self.on_add_message)
-        message_worker.update_bubble_signal.connect(self.on_update_bubble)
-        message_worker.update_duration_signal.connect(self.on_update_duration)
-        message_worker.update_text_signal.connect(self.on_update_text)
+        if self.chat_mode_combo.currentData() == "Agent":
+            logger.info("Agent mode, send message bubble")
+            message_worker = MessageWorker(
+                input_text=text,
+                input_audio=audio,
+                state=self.state,
+                llm_url=self.llm_url,
+                decoder_url=self.decoder_url,
+                system_prompt=self.system_prompt,
+                system_audios=self.system_audios,
+                loop=self.event_loop_message,
+            )
+            message_worker.finished.connect(self.on_message_task_finished)
+            message_worker.add_message_signal.connect(self.on_add_message)
+            message_worker.update_bubble_signal.connect(self.on_update_bubble)
+            message_worker.update_duration_signal.connect(self.on_update_duration)
+            message_worker.update_text_signal.connect(self.on_update_text)
+        else:
+            logger.info("Text mode, use websocket")
+            message_worker = TextMessageWorker(
+                input_text=text,
+                ws_server_uri=self.text_ws_uri,
+                loop=self.event_loop_message
+            )
         # worker -> QRunnable -> QThreadPool
         self.async_msg_runner = AsyncTaskRunner(message_worker)
         logger.info("start async message runner")
         self.thread_pool.start(self.async_msg_runner)
+    
         pass
 
     def stop_message_task(self):
@@ -873,6 +911,24 @@ class ChatWidget(QWidget):
             except Exception as e:
                 logger.error(f"Failed to delete {file_path}: {e}")
         self.audio_files.clear()
+
+
+class TextMessageWorker(AsyncTaskWorker):
+    def __init__(self, *, loop: asyncio.AbstractEventLoop, input_text: str, ws_server_uri: str = None):
+        super().__init__(loop)
+        self.input_text = input_text
+        self.ws_client = WebSocketClient(ws_server_uri, loop) if ws_server_uri else None
+
+    async def send_message_async(self):
+        text = self.input_text
+        await self.ws_client.start()
+        await self.ws_client.async_queue.put(text)
+        await self.ws_client.async_queue.put(None)
+        await self.ws_client.consume_data()
+        await self.ws_client.close()
+
+    async def _execute_task(self):
+        await self.send_message_async()
 
 
 class MessageWorker(AsyncTaskWorker):
