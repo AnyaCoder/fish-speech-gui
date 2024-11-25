@@ -88,13 +88,9 @@ class SettingsDialog(QDialog):
         self.proxy_url_input = QLineEdit(self.proxy_url)
         form_layout.addRow(_t("SettingsDialog.proxy_url"), self.proxy_url_input)
         self.voice_ws_uri_input = QLineEdit(self.voice_ws_uri)
-        self.voice_ws_uri_input.setPlaceholderText(
-            "Make it empty to disable websocket"
-        )
+        self.voice_ws_uri_input.setPlaceholderText("Make it empty to disable websocket")
         self.text_ws_uri_input = QLineEdit(self.text_ws_uri)
-        self.text_ws_uri_input.setPlaceholderText(
-            "Make it empty to disable websocket"
-        )
+        self.text_ws_uri_input.setPlaceholderText("Make it empty to disable websocket")
         form_layout.addRow(_t("SettingsDialog.voice_ws_uri"), self.voice_ws_uri_input)
         form_layout.addRow(_t("SettingsDialog.text_ws_uri"), self.text_ws_uri_input)
         self.mic_setting_combo = QComboBox()
@@ -728,7 +724,7 @@ class ChatWidget(QWidget):
         # os.remove(self.temp_wavfile)  # Delete the temporary audio file
         self.audio_files.append(self.temp_wavfile)
         self.voice_mode_enabled = False
-        
+
         self.voice_mode_button.setText("🎤")  # Reset the voice mode button
         self.voice_mode_button.setStyleSheet(RECORD_START_QSS)  # Reset record QSS
 
@@ -744,9 +740,7 @@ class ChatWidget(QWidget):
                 _t("ChatWidget.recording").format(dur=self.record_duration)
             )
         else:
-            self.cancel_button.setText(
-                "Cancel:" + f"{self.record_duration:.2f}s"
-            )
+            self.cancel_button.setText("Cancel:" + f"{self.record_duration:.2f}s")
         pass
 
     def init_messages(self):
@@ -819,13 +813,13 @@ class ChatWidget(QWidget):
             message_worker = TextMessageWorker(
                 input_text=text,
                 ws_server_uri=self.text_ws_uri,
-                loop=self.event_loop_message
+                loop=self.event_loop_message,
             )
         # worker -> QRunnable -> QThreadPool
         self.async_msg_runner = AsyncTaskRunner(message_worker)
         logger.info("start async message runner")
         self.thread_pool.start(self.async_msg_runner)
-    
+
         pass
 
     def stop_message_task(self):
@@ -914,7 +908,13 @@ class ChatWidget(QWidget):
 
 
 class TextMessageWorker(AsyncTaskWorker):
-    def __init__(self, *, loop: asyncio.AbstractEventLoop, input_text: str, ws_server_uri: str = None):
+    def __init__(
+        self,
+        *,
+        loop: asyncio.AbstractEventLoop,
+        input_text: str,
+        ws_server_uri: str = None,
+    ):
         super().__init__(loop)
         self.input_text = input_text
         self.ws_client = WebSocketClient(ws_server_uri, loop) if ws_server_uri else None
