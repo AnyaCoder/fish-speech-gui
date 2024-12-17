@@ -26,11 +26,12 @@ dependencies = [
     "pyqt6-sip==13.5.1",
     "pyqtdarktheme==2.1.0",
     "requests>=2.31.0",
-    "pydantic>=2.9.1",
-    "ormsgpack>=1.5.0",
+    "pydantic==2.9.2",
+    "ormsgpack==1.5.0",
     "numpy==1.24.3",
     "psutil>=6.1.0",
     "loguru>=0.7.2",
+    "httpx==0.27.2",
 ]
 
 [project.urls]
