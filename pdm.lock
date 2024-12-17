@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:8d04f77f3cf66feb934c69eeab22253440b668db7790317b2877205c3b1662dc"
+content_hash = "sha256:8efb57512ba8e31707c5c56513470a61bee8361a5ad85cff3eb930408960ae6a"
 
 [[metadata.targets]]
 requires_python = ">=3.10,<3.12"
@@ -30,6 +30,22 @@ dependencies = [
 files = [
     {file = "annotated_types-0.7.0-py3-none-any.whl", hash = "sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53"},
     {file = "annotated_types-0.7.0.tar.gz", hash = "sha256:aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89"},
+]
+
+[[package]]
+name = "anyio"
+version = "4.7.0"
+requires_python = ">=3.9"
+summary = "High level compatibility layer for multiple asynchronous event loop implementations"
+dependencies = [
+    "exceptiongroup>=1.0.2; python_version < \"3.11\"",
+    "idna>=2.8",
+    "sniffio>=1.1",
+    "typing-extensions>=4.5; python_version < \"3.13\"",
+]
+files = [
+    {file = "anyio-4.7.0-py3-none-any.whl", hash = "sha256:ea60c3723ab42ba6fff7e8ccb0488c898ec538ff4df1f1d5e642c3601d07e352"},
+    {file = "anyio-4.7.0.tar.gz", hash = "sha256:2f834749c602966b7d456a7567cafcb309f96482b5081d14ac93ccd457f9dd48"},
 ]
 
 [[package]]
@@ -260,6 +276,50 @@ files = [
 ]
 
 [[package]]
+name = "h11"
+version = "0.14.0"
+requires_python = ">=3.7"
+summary = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
+dependencies = [
+    "typing-extensions; python_version < \"3.8\"",
+]
+files = [
+    {file = "h11-0.14.0-py3-none-any.whl", hash = "sha256:e3fe4ac4b851c468cc8363d500db52c2ead036020723024a109d37346efaa761"},
+    {file = "h11-0.14.0.tar.gz", hash = "sha256:8f19fbbe99e72420ff35c00b27a34cb9937e902a8b810e2c88300c6f0a3b699d"},
+]
+
+[[package]]
+name = "httpcore"
+version = "1.0.7"
+requires_python = ">=3.8"
+summary = "A minimal low-level HTTP client."
+dependencies = [
+    "certifi",
+    "h11<0.15,>=0.13",
+]
+files = [
+    {file = "httpcore-1.0.7-py3-none-any.whl", hash = "sha256:a3fff8f43dc260d5bd363d9f9cf1830fa3a458b332856f34282de498ed420edd"},
+    {file = "httpcore-1.0.7.tar.gz", hash = "sha256:8551cb62a169ec7162ac7be8d4817d561f60e08eaa485234898414bb5a8a0b4c"},
+]
+
+[[package]]
+name = "httpx"
+version = "0.27.2"
+requires_python = ">=3.8"
+summary = "The next generation HTTP client."
+dependencies = [
+    "anyio",
+    "certifi",
+    "httpcore==1.*",
+    "idna",
+    "sniffio",
+]
+files = [
+    {file = "httpx-0.27.2-py3-none-any.whl", hash = "sha256:7bb2708e112d8fdd7829cd4243970f0c223274051cb35ee80c03301ee29a3df0"},
+    {file = "httpx-0.27.2.tar.gz", hash = "sha256:f7c2be1d2f3c3c3160d441802406b206c2b76f5947b11115e6df10c6c65e66c2"},
+]
+
+[[package]]
 name = "idna"
 version = "3.10"
 requires_python = ">=3.6"
@@ -477,21 +537,21 @@ files = [
 
 [[package]]
 name = "ormsgpack"
-version = "1.6.0"
+version = "1.5.0"
 requires_python = ">=3.8"
 summary = "Fast, correct Python msgpack library supporting dataclasses, datetimes, and numpy"
 files = [
-    {file = "ormsgpack-1.6.0-cp310-cp310-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:613e851edde1dc3b94e84e9d8046b9c603fce1e5bf40f3ebe129a81f9a31d4b9"},
-    {file = "ormsgpack-1.6.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a8e2b858cc378d2c46161bebfe6232de1e158eb2e7dfdf07172fe183bf8a9333"},
-    {file = "ormsgpack-1.6.0-cp310-cp310-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:4003867208e3b9b9471c0a4bbf68479dcde69137ca1c5860bd7236410bf65024"},
-    {file = "ormsgpack-1.6.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0fd584dd40d479a60cbae0ca59792b82144f35e355c363771566bb7d337ba8a9"},
-    {file = "ormsgpack-1.6.0-cp310-none-win_amd64.whl", hash = "sha256:e8b2cab0ddb98b1b26f01da552a76138299ecf29f8a04fe34ac5b686b9db02d0"},
-    {file = "ormsgpack-1.6.0-cp311-cp311-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:6f08a3c448e9ca65c7b5af600b3d795ffbee0dbd5b4defc6e12f89d2d56c57b4"},
-    {file = "ormsgpack-1.6.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:978330de00c1d8c20b62ae38f20b85312abefb6e46342617ba47d9a01b70d727"},
-    {file = "ormsgpack-1.6.0-cp311-cp311-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:b6b747ae7f2fa8e54cf7033a9907cc2dfeee70184148ce57d1c8dff3ed2d3692"},
-    {file = "ormsgpack-1.6.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:243b330577c8158a89fec4abce40254cf907637ea7e604bf866b3e39b3c5a819"},
-    {file = "ormsgpack-1.6.0-cp311-none-win_amd64.whl", hash = "sha256:75e1837f569fb6ae2f0c6415e983a0300b633b69a5d3480f34fb0a61f1662dbf"},
-    {file = "ormsgpack-1.6.0.tar.gz", hash = "sha256:0c9612147f3c406b56eba6a576948057ada711bda0831f192afd46be6e5dd91e"},
+    {file = "ormsgpack-1.5.0-cp310-cp310-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:98efdbb1f8c4a172a05143bbbc000491ca7d99644521ad90a15d5e96c7895fba"},
+    {file = "ormsgpack-1.5.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:091bb019b3101dd034515dce13852f4250aa2ee406e6ac5cb8d745dc1e146e6f"},
+    {file = "ormsgpack-1.5.0-cp310-cp310-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:7ee97e618e852891e3cb3ae8a0662d54e289e7ba438fc245e70643c6f0b16849"},
+    {file = "ormsgpack-1.5.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:789725c38493509a1c7a0a25d9baaf2edc120a38a51e0a85008215de25d034c7"},
+    {file = "ormsgpack-1.5.0-cp310-none-win_amd64.whl", hash = "sha256:c81dfcaef16e1a0583f1491441d6f7888b742d72dc299fdeddc3da069774ede4"},
+    {file = "ormsgpack-1.5.0-cp311-cp311-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:a94c8dfe1ee41e536b9c20af48b191fcae89b015b7fcbef0909915c0d5624c8d"},
+    {file = "ormsgpack-1.5.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fb56792348a674ae8915106bdf7b02720852fc195fdda23884c24a5f05e5fd9a"},
+    {file = "ormsgpack-1.5.0-cp311-cp311-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:044856a25c2fa19261f02a6f7a9b5329e90a51cf45780cface01b667cc21ac3d"},
+    {file = "ormsgpack-1.5.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:111214ea0970eb49b19ffa1fde94996f09efa4d8585986be9d5b81492fa1e3fc"},
+    {file = "ormsgpack-1.5.0-cp311-none-win_amd64.whl", hash = "sha256:e2a28bfc10cb492659c8704007567483aa3cfc863a22fd5973309373f396c9e1"},
+    {file = "ormsgpack-1.5.0.tar.gz", hash = "sha256:00c0743ebaa8d21f1c868fbb609c99151ea79e67fec98b51a29077efd91ce348"},
 ]
 
 [[package]]
@@ -924,6 +984,16 @@ summary = "Python 2 and 3 compatibility utilities"
 files = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
+]
+
+[[package]]
+name = "sniffio"
+version = "1.3.1"
+requires_python = ">=3.7"
+summary = "Sniff out which async library your code is running under"
+files = [
+    {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
+    {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
 ]
 
 [[package]]
